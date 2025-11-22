@@ -1,0 +1,2661 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HoloDice Momento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff;
+            color: #00ffff;
+        }
+
+        .menu-panel {
+            background: rgba(10, 10, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        .cyber-button {
+            background: linear-gradient(135deg, #1a1a3a 0%, #2a2a4a 100%);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .cyber-button:hover {
+            background: linear-gradient(135deg, #2a2a4a 0%, #3a3a5a 100%);
+            box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+        }
+
+        .cyber-slider {
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .cyber-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00ffff;
+            cursor: pointer;
+        }
+
+        .photo-item {
+            background: rgba(30, 30, 60, 0.8);
+            border: 1px solid #00ffff;
+            border-radius: 3px;
+            transition: all 0.3s;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1;
+            cursor: pointer;
+        }
+
+
+        .photo-item:hover {
+            box-shadow: 0 0 10px #ff00ff;
+            background: rgba(40, 40, 80, 0.9);
+            border-color: #ff00ff;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        
+        .photo-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 3px;
+        }
+        
+        .photo-item:hover .photo-thumbnail {
+            transform: scale(1.1);
+        }
+
+        .toggle-button {
+            background: rgba(10, 10, 30, 0.9);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        #canvas-container {
+            transition: all 0.5s ease;
+        }
+
+        .photo-item {
+            background: rgba(30, 30, 60, 0.8);
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+            transition: all 0.3s;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 1;
+        }
+
+        .photo-item:hover {
+            box-shadow: 0 0 10px #ff00ff;
+            background: rgba(40, 40, 80, 0.9);
+            border-color: #ff00ff;
+        }
+
+        .photo-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            transition: transform 0.3s;
+        }
+
+        .photo-item:hover .photo-thumbnail {
+            transform: scale(1.15);
+        }
+
+        .photo-delete-btn {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #ff0000;
+            color: #ff4444;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s;
+            line-height: 1;
+        }
+
+        .photo-item:hover .photo-delete-btn {
+            opacity: 1;
+        }
+
+        .photo-delete-btn:hover {
+            background: rgba(255, 0, 0, 0.9);
+            color: white;
+            transform: scale(1.15);
+        }
+        .grid-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(0deg, transparent 24%, rgba(0, 255, 255, 0.05) 25%, rgba(0, 255, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, 0.05) 75%, rgba(0, 255, 255, 0.05) 76%, transparent 77%, transparent),
+                linear-gradient(90deg, transparent 24%, rgba(0, 255, 255, 0.05) 25%, rgba(0, 255, 255, 0.05) 26%, transparent 27%, transparent 74%, rgba(0, 255, 255, 0.05) 75%, rgba(0, 255, 255, 0.05) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        .controls-overlay {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(10, 10, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid #9d4edd;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.5);
+            z-index: 10;
+            max-width: 280px;
+            transition: all 0.3s;
+        }
+
+        .controls-overlay:hover {
+            box-shadow: 0 0 30px rgba(157, 78, 221, 0.8);
+            border-color: #00ffff;
+        }
+
+        .controls-overlay h3 {
+            color: #9d4edd;
+            text-shadow: 0 0 10px #9d4edd;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .controls-overlay p {
+            color: #00ffff;
+            font-size: 11px;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .controls-overlay p:last-child {
+            margin-bottom: 0;
+        }
+        .controls-overlay.minimized {
+            padding: 8px 12px;
+        }
+
+        .controls-overlay.minimized .controls-content {
+            display: none;
+        }
+
+        .controls-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .controls-toggle-icon {
+            margin-left: 8px;
+            transition: transform 0.3s;
+        }
+
+        .controls-overlay.minimized .controls-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 28px;
+            background: linear-gradient(135deg, #1a1a3a 0%, #2a2a4a 100%);
+            border: 2px solid #ff00ff;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: inset 0 0 10px rgba(255, 0, 255, 0.3);
+        }
+
+        .toggle-switch:hover {
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.6), inset 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+
+        .toggle-switch.active {
+            background: linear-gradient(135deg, #2a2a4a 0%, #3a3a5a 100%);
+            border-color: #00ffff;
+            box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .toggle-switch.active:hover {
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.6), inset 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: #ff00ff;
+            border-radius: 50%;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px #ff00ff, 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active .toggle-slider {
+            left: 34px;
+            background: #00ffff;
+            box-shadow: 0 0 10px #00ffff, 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-label {
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+
+        .toggle-label.inactive {
+            color: #666;
+            text-shadow: none;
+        }
+
+        .toggle-label.active {
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        /* Overlay Fullscreen per visualizzazione foto */
+        .photo-fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.98);
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .photo-fullscreen-overlay.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .photo-fullscreen-container {
+            max-width: 95vw;
+            max-height: calc(100vh - 120px);
+            margin-top: 80px;
+            position: relative;
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .photo-fullscreen-image {
+            max-width: 100%;
+            max-height: calc(100vh - 120px);
+            object-fit: contain;
+            border: 3px solid #00ffff;
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.6), 0 0 100px rgba(255, 0, 255, 0.4);
+            transition: opacity 0.5s ease;
+        }
+
+        .photo-fullscreen-image.fading {
+            opacity: 0;
+        }
+
+        .photo-fullscreen-close {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ff0066 0%, #ff4444 100%);
+            border: 3px solid #ff00ff;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+            line-height: 1;
+            user-select: none;
+            z-index: 10001;
+        }
+
+        .photo-fullscreen-close:hover {
+            transform: scale(1.15) rotate(90deg);
+            box-shadow: 0 0 30px rgba(255, 0, 255, 1), 0 0 50px rgba(255, 0, 0, 0.8);
+            background: linear-gradient(135deg, #ff0044 0%, #ff6666 100%);
+        }
+
+        .photo-fullscreen-info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            text-align: left;
+            color: #00ffff;
+            font-size: 14px;
+            text-shadow: 0 0 10px #00ffff;
+            letter-spacing: 1px;
+            z-index: 10001;
+            background: rgba(10, 10, 30, 0.8);
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 2px solid #00ffff;
+        }
+
+        /* NUOVI CONTROLLI NAVIGAZIONE */
+        .photo-nav-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, #1a1a3a 0%, #2a2a4a 100%);
+            border: 3px solid #00ffff;
+            color: #00ffff;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+            user-select: none;
+            z-index: 10;
+        }
+
+        .photo-nav-button:hover {
+            background: linear-gradient(135deg, #2a2a4a 0%, #3a3a5a 100%);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 1);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .photo-nav-button.prev {
+            left: -80px;
+        }
+
+        .photo-nav-button.next {
+            right: -80px;
+        }
+
+        .photo-controls-panel {
+            position: fixed;
+            top: 27px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border: 2px solid #9d4edd;
+            border-radius: 5px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.6);
+            z-index: 10001;
+        }
+
+        .slideshow-button {
+            background: linear-gradient(135deg, #1a1a3a 0%, #2a2a4a 100%);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 0 0 5px #00ffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .slideshow-button:hover {
+            background: linear-gradient(135deg, #2a2a4a 0%, #3a3a5a 100%);
+            box-shadow: 0 0 15px #00ffff;
+        }
+
+        .slideshow-button.active {
+            border-color: #ff00ff;
+            color: #ff00ff;
+            text-shadow: 0 0 5px #ff00ff;
+        }
+
+        .slideshow-settings {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #00ffff;
+            font-size: 11px;
+        }
+
+        .slideshow-slider {
+            -webkit-appearance: none;
+            background: linear-gradient(90deg, #ff00ff, #00ffff);
+            height: 4px;
+            border-radius: 2px;
+            width: 100px;
+        }
+
+        .slideshow-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ffff;
+            cursor: pointer;
+        }
+
+        .slideshow-slider::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            background: #00ffff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ffff;
+            cursor: pointer;
+            border: none;
+        }
+
+        /* NUOVO: Box Risultato */
+        .result-box {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            background: rgba(10, 10, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border: 3px solid #00ffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), 0 0 60px rgba(255, 0, 255, 0.4);
+            z-index: 10;
+            min-width: 200px;
+            text-align: center;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translate(0, calc(-50% + 20px));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-box.visible {
+            opacity: 1;
+            transform: translate(0, -50%);
+        }
+
+        .result-box.winner {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(0, 255, 255, 0.8), 0 0 60px rgba(255, 0, 255, 0.4);
+            }
+            50% {
+                box-shadow: 0 0 50px rgba(0, 255, 255, 1), 0 0 100px rgba(255, 0, 255, 0.8);
+            }
+        }
+
+        .result-label {
+            color: #9d4edd;
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px #9d4edd;
+        }
+
+        .result-preview {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto;
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            background: rgba(20, 20, 50, 0.7);
+        }
+        .result-value {
+            color: #00ffff;
+            font-size: 32px;
+            font-weight: bold;
+            text-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+            line-height: 1;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result-dice-type {
+            color: #ff00ff;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 5px #ff00ff;
+        } 
+    </style>
+</head>
+<body class="bg-black text-cyan-400">
+    <!-- Menu Laterale -->
+    <div id="menu" class="menu-panel fixed left-0 top-0 h-full w-80 z-20 overflow-hidden transition-all duration-500 flex flex-col">
+        <div class="p-6 flex-shrink-0">
+            <h1 class="text-2xl font-bold neon-text mb-6">HOLO•DICE•MOMENTO</h1>
+            <!-- Selezione Tipo Dado -->
+            <div class="mb-6">
+                <label class="block mb-2 text-sm neon-text">TIPO DI DADO: <span id="diceLabel" class="text-purple-400">D20 - Icosaedro</span></label>
+                <input type="range" id="diceType" min="0" max="5" value="5" class="cyber-slider w-full">
+                <div class="flex justify-between text-xs mt-1 text-cyan-400">
+                    <span>D4</span>
+                    <span>D6</span>
+                    <span>D8</span>
+                    <span>D10</span>
+                    <span>D12</span>
+                    <span>D20</span>
+                </div>
+            </div>
+
+            <!-- Pulsante Tira Dado -->
+            <button id="rollDice" class="cyber-button w-full p-4 rounded text-lg font-bold mb-4">
+                🎲 TIRA IL DADO
+            </button>
+
+            <!-- Reset View -->
+            <button id="resetView" class="cyber-button w-full p-2 rounded text-sm mb-4">
+                🔄 RESET VISTA
+            </button>
+
+            <!-- Upload Foto -->
+            <div class="mb-3">
+                <label class="block mb-2 text-sm neon-text">CARICA FOTO (max 50)</label>
+                <input type="file" id="photoUpload" accept="image/*" multiple class="w-full p-2 bg-gray-900 border-2 border-cyan-400 text-cyan-400 rounded text-xs">
+                <div class="flex items-center justify-between mt-1">
+                    <p class="text-xs text-purple-400">Foto: <span id="photoCount">0</span>/50</p>
+                    <button id="deleteAllPhotos" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 border border-red-400 rounded hover:bg-red-900 transition-all">
+                        🗑️ Elimina tutto
+                    </button>
+                </div>
+                <!-- Toggle Foto/Numeri -->
+                <div class="mt-3 p-3 bg-gray-900 border border-cyan-400 rounded">
+                    <label class="block mb-2 text-xs neon-text text-center">
+                        VISUALIZZAZIONE
+                    </label>
+                    <div class="toggle-container">
+                        <span id="labelNum" class="toggle-label active">NUMERI</span>
+                        <div id="photoToggle" class="toggle-switch">
+                            <div class="toggle-slider"></div>
+                        </div>
+                        <span id="labelPhoto" class="toggle-label inactive">FOTO</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista Foto - occupa tutto lo spazio rimanente -->
+        <div class="flex-1 overflow-y-auto px-6 pb-6">
+            <div id="photoList" class="grid grid-cols-5 gap-2">
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle Menu Button -->
+    <button id="toggleMenu" class="toggle-button fixed left-80 top-4 z-30 p-2 rounded-r transition-all duration-500">
+        ◀
+    </button>
+
+    <!-- Area Canvas 3D -->
+    <div id="canvas-container" class="fixed top-0 left-80 right-0 bottom-0 transition-all duration-500">
+        <div id="three-container" class="w-full h-full"></div>
+        <!-- OVERLAY CONTROLLI MINIMIZZABILE -->
+        <div class="controls-overlay" id="controlsOverlay">
+            <div class="controls-toggle" onclick="toggleControls()">
+                <h3>⌨️ CONTROLLI</h3>
+                <span class="controls-toggle-icon">▼</span>
+            </div>
+            <div class="controls-content">
+                <p>🖱️ <strong>SX:</strong> Ruota dado</p>
+                <p>🖱️ <strong>DX:</strong> Ruota vista</p>
+                <p>🖱️ <strong>CENTRALE:</strong> Sposta Dado (X/Y)</p>
+                <p>🖱️ <strong>Shift + CENTRALE:</strong> Sposta (X/Z)</p>
+                <p>🖱️ <strong>Rotella:</strong> Zoom</p>
+                <p>⌨️ <strong>SPAZIO:</strong> Tira dado</p>
+                <p>⌨️ <strong>V:</strong> Toggle Foto/Numeri</p>
+                <p>🖱️ <strong>DOPPIO CLICK:</strong> Visualizza foto</p>
+            </div>
+        </div>
+        <!-- ===== FINE OVERLAY ===== -->
+    </div>
+
+    <!-- Box Risultato -->
+    <div id="resultBox" class="result-box">
+        <div class="result-label">RISULTATO</div>
+        <canvas id="resultPreview" class="result-preview" width="256" height="256"></canvas>
+        <div class="result-value" id="resultValue">-</div>
+        <div class="result-dice-type" id="resultDiceType">D20</div>
+    </div>
+
+    <!-- Overlay Fullscreen Foto -->
+    <div id="photoFullscreenOverlay" class="photo-fullscreen-overlay">
+        <div class="photo-fullscreen-container">
+            <button class="photo-fullscreen-close" onclick="closeFullscreenPhoto()">✕</button>
+            <!-- Pulsanti Navigazione -->
+            <button class="photo-nav-button prev" onclick="navigatePhoto(-1)">‹</button>
+            <button class="photo-nav-button next" onclick="navigatePhoto(1)">›</button>
+            <img id="photoFullscreenImage" class="photo-fullscreen-image" src="" alt="Foto Fullscreen">
+            <!-- Pannello Controlli Slideshow -->
+            <div class="photo-controls-panel">
+                <button class="slideshow-button" id="slideshowButton" onclick="toggleSlideshow()">
+                    <span id="slideshowIcon">▶</span>
+                    <span id="slideshowText">SLIDESHOW</span>
+                </button>
+                <div class="slideshow-settings">
+                    <span>Pausa:</span>
+                    <input type="range" id="slideshowInterval" class="slideshow-slider" min="1" max="10" value="3" step="0.5">
+                    <span id="slideshowIntervalValue">3s</span>
+                </div>
+            </div>
+            <div class="photo-fullscreen-info">
+                <span id="photoCounter">1 / 1</span> | Usa frecce ←→ o ESC per chiudere
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variabili globali
+        let scene, camera, renderer, dice, photos = [];
+        let diceType = 20;
+        let isDragging = false, isPanning = false, isRotatingView = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let diceRotation = { x: 0, y: 0 };
+        let dicePosition = { x: 0, y: 0, z: 0 };
+        let targetZoom = 5;
+        let currentZoom = 5;
+        let menuOpen = true;
+        let particleSystem;
+        let isRolling = false;
+        let resultShown = false;
+        let worldGroup;
+        let showPhotos = false;
+        let viewRotationY = 0;
+        let selectedPhotosForDice = [];
+        let raycaster, mouse;
+        
+        // ========== VARIABILI PER PIANO DINAMICO RILASSANTE ==========
+        let floorPlane, floorTexture, floorCanvas, floorCtx;
+        let waveParticles = [];
+        let flowingParticles = [];
+        let gridLines = [];
+        let timeOffset = 0;
+        let waves = [];
+        const GRID_SIZE = 64;
+        // ==============================================================
+        
+        // Variabili per la navigazione foto
+        let currentPhotoIndex = 0;
+        let slideshowActive = false;
+        let slideshowTimer = null;
+
+        // NUOVO: Variabile per il risultato del dado
+        let lastDiceResult = null;
+
+        // Mostra foto in fullscreen
+        function showFullscreenPhoto(photo, index = 0) {
+            currentPhotoIndex = index;
+            const overlay = document.getElementById('photoFullscreenOverlay');
+            const img = document.getElementById('photoFullscreenImage');
+            
+            img.src = photo.src;
+            overlay.classList.add('active');
+            updatePhotoCounter();
+            
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Naviga tra le foto
+        function navigatePhoto(direction) {
+            if (selectedPhotosForDice.length === 0) return;
+            
+            const img = document.getElementById('photoFullscreenImage');
+            
+            img.classList.add('fading');
+            
+            setTimeout(() => {
+                currentPhotoIndex = (currentPhotoIndex + direction + selectedPhotosForDice.length) % selectedPhotosForDice.length;
+                img.src = selectedPhotosForDice[currentPhotoIndex].src;
+                updatePhotoCounter();
+                
+                setTimeout(() => {
+                    img.classList.remove('fading');
+                }, 50);
+            }, 250);
+        }
+
+        // Aggiorna contatore foto
+        function updatePhotoCounter() {
+            const counter = document.getElementById('photoCounter');
+            counter.textContent = `${currentPhotoIndex + 1} / ${selectedPhotosForDice.length}`;
+        }
+
+        // Toggle slideshow
+        function toggleSlideshow() {
+            slideshowActive = !slideshowActive;
+            const button = document.getElementById('slideshowButton');
+            const icon = document.getElementById('slideshowIcon');
+            const text = document.getElementById('slideshowText');
+            
+            if (slideshowActive) {
+                button.classList.add('active');
+                icon.textContent = '⏸';
+                text.textContent = 'PAUSA';
+                startSlideshow();
+            } else {
+                button.classList.remove('active');
+                icon.textContent = '▶';
+                text.textContent = 'SLIDESHOW';
+                stopSlideshow();
+            }
+        }
+
+        // Avvia slideshow
+        function startSlideshow() {
+            const interval = parseFloat(document.getElementById('slideshowInterval').value) * 1000;
+            
+            slideshowTimer = setInterval(() => {
+                navigatePhoto(1);
+            }, interval);
+        }
+
+        // Ferma slideshow
+        function stopSlideshow() {
+            if (slideshowTimer) {
+                clearInterval(slideshowTimer);
+                slideshowTimer = null;
+            }
+        }
+
+        // Chiudi foto fullscreen
+        function closeFullscreenPhoto() {
+            const overlay = document.getElementById('photoFullscreenOverlay');
+            overlay.classList.remove('active');
+            
+            if (slideshowActive) {
+                toggleSlideshow();
+            }
+            
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Gestione doppio click sulla faccia del dado
+        function onDiceDoubleClick(event) {
+            if (!showPhotos || photos.length === 0 || selectedPhotosForDice.length === 0 || !dice) return;
+            
+            const container = renderer.domElement;
+            const rect = container.getBoundingClientRect();
+            
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObject(dice, true);
+            
+            if (intersects.length > 0) {
+                let validIntersect = null;
+                for (let i = 0; i < intersects.length; i++) {
+                    const obj = intersects[i].object;
+                    if (obj.type !== 'LineSegments') {
+                        validIntersect = intersects[i];
+                        break;
+                    }
+                }
+                
+                if (!validIntersect) return;
+                
+                const intersectedObject = validIntersect.object;
+                let faceIndex = -1;
+                
+                if (diceType === 6) {
+                    if (validIntersect.face && validIntersect.face.materialIndex !== undefined) {
+                        faceIndex = validIntersect.face.materialIndex;
+                    }
+                } else {
+                    const meshChildren = dice.children.filter(child => child.type === 'Mesh');
+                    
+                    for (let i = 0; i < meshChildren.length; i++) {
+                        if (meshChildren[i] === intersectedObject) {
+                            faceIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (faceIndex !== -1 && faceIndex < selectedPhotosForDice.length && selectedPhotosForDice[faceIndex]) {
+                    showFullscreenPhoto(selectedPhotosForDice[faceIndex], faceIndex);
+                }
+            }
+        }
+        // Disegna il numero stilizzato sul canvas del risultato
+        function drawResultNumber(ctx, number) {
+            let fontSize = 140;
+            if (diceType === 20) fontSize = 85;
+            if (diceType === 12) fontSize = 120;
+            if (diceType === 10) fontSize = 130;
+            
+            ctx.font = `bold ${fontSize}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffff';
+            ctx.fillStyle = '#00ffff';
+            ctx.fillText(number, 128, 128);
+            
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ff00ff';
+            ctx.strokeText(number, 128, 128);
+        }
+        // NUOVO: Mostra il risultato nel box con preview della faccia
+        function displayResult(result) {
+            lastDiceResult = result;
+            const resultBox = document.getElementById('resultBox');
+            const resultValue = document.getElementById('resultValue');
+            const resultDiceType = document.getElementById('resultDiceType');
+            const canvas = document.getElementById('resultPreview');
+            const ctx = canvas.getContext('2d');
+            
+            // Disegna la texture della faccia vincente
+            const faceIndex = diceType === 10 ? result : result - 1;
+            
+            // Sfondo
+            ctx.fillStyle = 'rgba(20, 20, 50, 0.7)';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // Disegna foto o numero
+            if (showPhotos && photos.length > 0 && selectedPhotosForDice[faceIndex]) {
+                try {
+                    ctx.drawImage(selectedPhotosForDice[faceIndex], 0, 0, 256, 256);
+                    ctx.strokeStyle = '#00ffff';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(0, 0, 256, 256);
+                } catch(e) {
+                    console.error('Errore nel disegno dell\'immagine:', e);
+                    drawResultNumber(ctx, result);
+                }
+            } else {
+                drawResultNumber(ctx, result);
+            }
+            
+            // NUOVO: Mostra/nascondi il canvas in base alla modalità
+            if (showPhotos) {
+                canvas.style.display = 'block';
+            } else {
+                canvas.style.display = 'none';
+            }
+            
+            resultValue.textContent = result;
+            resultDiceType.textContent = 'D' + diceType;
+            
+            resultBox.classList.add('visible', 'winner');
+            
+            setTimeout(() => {
+                resultBox.classList.remove('winner');
+            }, 2000);
+        }
+        // NUOVO: Nascondi il risultato
+        function hideResult() {
+            const resultBox = document.getElementById('resultBox');
+            resultBox.classList.remove('visible', 'winner');
+        }
+        // ========== PIANO DINAMICO CON ZIGZAG RANDOM ==========
+        function createDynamicFloorPattern() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+            
+            // Sfondo scuro con gradiente
+            const bgGradient = ctx.createRadialGradient(512, 512, 0, 512, 512, 512);
+            bgGradient.addColorStop(0, '#0f0f1f');
+            bgGradient.addColorStop(1, '#060610');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Salva linee della griglia per animazione
+            gridLines = [];
+            
+            // Linee verticali
+            for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+                gridLines.push({
+                    type: 'vertical',
+                    pos: x,
+                    phase: Math.random() * Math.PI * 2,
+                    isActive: Math.random() > 0.7
+                });
+            }
+            
+            // Linee orizzontali
+            for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+                gridLines.push({
+                    type: 'horizontal',
+                    pos: y,
+                    phase: Math.random() * Math.PI * 2,
+                    isActive: Math.random() > 0.7
+                });
+            }
+            
+            // Funzione per creare una nuova particella da un bordo random
+            function createNewParticle() {
+                const edge = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+                const gridSteps = Math.floor(1024 / GRID_SIZE);
+                let x, y, direction;
+                
+                switch(edge) {
+                    case 0: // top - entra da sopra andando giù
+                        x = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                        y = 0;
+                        direction = 3; // giù
+                        break;
+                    case 1: // right - entra da destra andando sinistra
+                        x = (gridSteps - 1) * GRID_SIZE;
+                        y = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                        direction = 2; // sinistra
+                        break;
+                    case 2: // bottom - entra da sotto andando su
+                        x = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                        y = (gridSteps - 1) * GRID_SIZE;
+                        direction = 1; // su
+                        break;
+                    case 3: // left - entra da sinistra andando destra
+                        x = 0;
+                        y = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                        direction = 0; // destra
+                        break;
+                }
+                
+                return {
+                    x: x,
+                    y: y,
+                    direction: direction,
+                    speed: (0.3 + Math.random() * 0.5) * 1.5,
+                    size: 3 + Math.random() * 4,
+                    color: Math.random() > 0.5 ? '#00ffff' : '#9d4edd',
+                    phase: Math.random() * Math.PI * 2,
+                    progress: 0
+                };
+            }
+            
+            // Crea particelle iniziali
+            for (let i = 0; i < 15; i++) {
+                flowingParticles.push(createNewParticle());
+            }
+            
+            // Crea onde concentriche
+            for (let i = 0; i < 3; i++) {
+                waves.push({
+                    x: 256 + Math.random() * 512,
+                    y: 256 + Math.random() * 512,
+                    radius: Math.random() * 200,
+                    maxRadius: 400 + Math.random() * 200,
+                    speed: (0.2 + Math.random() * 0.3) * 1.5,
+                    opacity: 0.3,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+            
+            // Nodi luminosi statici
+            for (let x = 0; x <= canvas.width; x += GRID_SIZE) {
+                for (let y = 0; y <= canvas.height; y += GRID_SIZE) {
+                    if (Math.random() > 0.7) {
+                        waveParticles.push({
+                            x: x,
+                            y: y,
+                            phase: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+            }
+            
+            return canvas;
+        }
+
+        function createRelaxingFloorPlane() {
+            floorCanvas = createDynamicFloorPattern();
+            floorCtx = floorCanvas.getContext('2d');
+            floorTexture = new THREE.CanvasTexture(floorCanvas);
+            floorTexture.needsUpdate = true;
+            
+            const planeGeometry = new THREE.PlaneGeometry(10, 10, 1, 1);
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                map: floorTexture,
+                transparent: true,
+                opacity: 0.85,
+                side: THREE.DoubleSide
+            });
+            
+            floorPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+            floorPlane.rotation.x = -Math.PI / 2;
+            floorPlane.position.y = -2;
+            worldGroup.add(floorPlane);
+            
+            const borderGeometry = new THREE.EdgesGeometry(planeGeometry);
+            const borderMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.4
+            });
+            const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+            floorPlane.add(border);
+        }
+
+        function updateDynamicFloorAnimation() {
+            if (!floorCanvas || !floorCtx) return;
+            
+            // Incrementa tempo lentamente
+            timeOffset += 0.008;
+            
+            // Sfondo
+            const bgGradient = floorCtx.createRadialGradient(512, 512, 0, 512, 512, 512);
+            bgGradient.addColorStop(0, '#0f0f1f');
+            bgGradient.addColorStop(1, '#060610');
+            floorCtx.fillStyle = bgGradient;
+            floorCtx.fillRect(0, 0, floorCanvas.width, floorCanvas.height);
+            
+            // ===== ONDE CONCENTRICHE LENTE =====
+            waves.forEach((wave, index) => {
+                wave.radius += wave.speed;
+                
+                if (wave.radius > wave.maxRadius) {
+                    wave.radius = 0;
+                    wave.x = 256 + Math.random() * 512;
+                    wave.y = 256 + Math.random() * 512;
+                }
+                
+                const opacity = (1 - wave.radius / wave.maxRadius) * 0.225;
+                floorCtx.strokeStyle = `rgba(0, 255, 255, ${opacity})`;
+                floorCtx.lineWidth = 2;
+                floorCtx.shadowBlur = 10;
+                floorCtx.shadowColor = '#00ffff';
+                floorCtx.beginPath();
+                floorCtx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+                floorCtx.stroke();
+                
+                if (wave.radius > 30) {
+                    const innerOpacity = (1 - wave.radius / wave.maxRadius) * 0.15;
+                    floorCtx.strokeStyle = `rgba(157, 78, 221, ${innerOpacity})`;
+                    floorCtx.shadowColor = '#9d4edd';
+                    floorCtx.beginPath();
+                    floorCtx.arc(wave.x, wave.y, wave.radius - 30, 0, Math.PI * 2);
+                    floorCtx.stroke();
+                }
+            });
+            
+            // ===== GRIGLIA CON PULSAZIONE =====
+            gridLines.forEach(line => {
+                const pulse = Math.sin(timeOffset + line.phase) * 0.5 + 0.5;
+                const baseOpacity = 0.08;
+                const opacity = line.isActive ? baseOpacity + pulse * 0.08 : baseOpacity;
+                
+                floorCtx.strokeStyle = `rgba(0, 255, 255, ${opacity})`;
+                floorCtx.lineWidth = line.isActive ? 1.5 : 1;
+                floorCtx.shadowBlur = line.isActive ? 8 : 0;
+                floorCtx.shadowColor = '#00ffff';
+                
+                floorCtx.beginPath();
+                if (line.type === 'vertical') {
+                    floorCtx.moveTo(line.pos, 0);
+                    floorCtx.lineTo(line.pos, floorCanvas.height);
+                } else {
+                    floorCtx.moveTo(0, line.pos);
+                    floorCtx.lineTo(floorCanvas.width, line.pos);
+                }
+                floorCtx.stroke();
+            });
+            
+            // ===== PARTICELLE CON ZIGZAG RANDOM =====
+            floorCtx.shadowBlur = 15;
+
+            flowingParticles.forEach((particle, index) => {
+                // Incrementa progresso
+                particle.progress += particle.speed;
+                
+                // Se ha raggiunto il prossimo nodo
+                if (particle.progress >= GRID_SIZE) {
+                    particle.progress = 0;
+                    
+                    // Aggiorna posizione al nodo raggiunto
+                    switch(particle.direction) {
+                        case 0: particle.x += GRID_SIZE; break; // destra
+                        case 1: particle.y -= GRID_SIZE; break; // su
+                        case 2: particle.x -= GRID_SIZE; break; // sinistra
+                        case 3: particle.y += GRID_SIZE; break; // giù
+                    }
+                    
+                    // Controlla se è uscita dalla griglia
+                    if (particle.x < 0 || particle.x >= 1024 || particle.y < 0 || particle.y >= 1024) {
+                        // Ricrea la particella da un nuovo bordo
+                        const gridSteps = Math.floor(1024 / GRID_SIZE);
+                        const edge = Math.floor(Math.random() * 4);
+                        
+                        switch(edge) {
+                            case 0: // top
+                                particle.x = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                                particle.y = 0;
+                                particle.direction = 3; // giù
+                                break;
+                            case 1: // right
+                                particle.x = (gridSteps - 1) * GRID_SIZE;
+                                particle.y = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                                particle.direction = 2; // sinistra
+                                break;
+                            case 2: // bottom
+                                particle.x = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                                particle.y = (gridSteps - 1) * GRID_SIZE;
+                                particle.direction = 1; // su
+                                break;
+                            case 3: // left
+                                particle.x = 0;
+                                particle.y = Math.floor(Math.random() * gridSteps) * GRID_SIZE;
+                                particle.direction = 0; // destra
+                                break;
+                        }
+                        particle.progress = 0;
+                    } else {
+                        // ZIGZAG: 60% di probabilità di cambiare direzione
+                        if (Math.random() < 0.6) {
+                            const turn = Math.random() < 0.5 ? -1 : 1; // -1 = svolta sinistra, 1 = svolta destra
+                            particle.direction = (particle.direction + turn + 4) % 4;
+                        }
+                        // Altrimenti continua dritto (40% probabilità)
+                    }
+                }
+                
+                // Calcola posizione interpolata
+                let drawX = particle.x;
+                let drawY = particle.y;
+                
+                switch(particle.direction) {
+                    case 0: drawX += particle.progress; break;
+                    case 1: drawY -= particle.progress; break;
+                    case 2: drawX -= particle.progress; break;
+                    case 3: drawY += particle.progress; break;
+                }
+                
+                const pulse = Math.sin(timeOffset + particle.phase) * 0.5 + 0.5;
+                const opacity = 0.4 + pulse * 0.4;
+                
+                const gradient = floorCtx.createRadialGradient(
+                    drawX, drawY, 0,
+                    drawX, drawY, particle.size * 3
+                );
+                
+                const color = particle.color === '#00ffff' ? '0, 255, 255' : '157, 78, 221';
+                gradient.addColorStop(0, `rgba(${color}, ${opacity})`);
+                gradient.addColorStop(1, `rgba(${color}, 0)`);
+                
+                floorCtx.fillStyle = gradient;
+                floorCtx.shadowColor = particle.color;
+                floorCtx.beginPath();
+                floorCtx.arc(drawX, drawY, particle.size, 0, Math.PI * 2);
+                floorCtx.fill();
+            });
+            
+            // ===== NODI PULSANTI =====
+            floorCtx.shadowBlur = 20;
+            
+            waveParticles.forEach((particle, i) => {
+                const pulse = Math.sin(timeOffset * 0.7 + particle.phase) * 0.5 + 0.5;
+                const size = 4 + pulse * 5;
+                const opacity = 0.2 + pulse * 0.3;
+                
+                const nodeGradient = floorCtx.createRadialGradient(
+                    particle.x, particle.y, 0,
+                    particle.x, particle.y, size * 2.5
+                );
+                nodeGradient.addColorStop(0, `rgba(0, 255, 255, ${opacity})`);
+                nodeGradient.addColorStop(0.5, `rgba(157, 78, 221, ${opacity * 0.5})`);
+                nodeGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+                
+                floorCtx.fillStyle = nodeGradient;
+                floorCtx.shadowColor = pulse > 0.5 ? '#00ffff' : '#9d4edd';
+                floorCtx.beginPath();
+                floorCtx.arc(particle.x, particle.y, size, 0, Math.PI * 2);
+                floorCtx.fill();
+            });
+            
+            // ===== REAZIONE AL DADO =====
+            if (dice) {
+                const diceWorldPos = new THREE.Vector3(
+                    dice.position.x,
+                    0,
+                    dice.position.z
+                );
+                
+                const textureX = (diceWorldPos.x / 10 + 0.5) * floorCanvas.width;
+                const textureZ = (diceWorldPos.z / 10 + 0.5) * floorCanvas.height;
+                
+                const reactionGradient = floorCtx.createRadialGradient(
+                    textureX, textureZ, 0,
+                    textureX, textureZ, 120
+                );
+                reactionGradient.addColorStop(0, 'rgba(157, 78, 221, 0.2)');
+                reactionGradient.addColorStop(0.5, 'rgba(0, 255, 255, 0.1)');
+                reactionGradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+                
+                floorCtx.fillStyle = reactionGradient;
+                floorCtx.shadowBlur = 30;
+                floorCtx.shadowColor = '#9d4edd';
+                floorCtx.beginPath();
+                floorCtx.arc(textureX, textureZ, 100, 0, Math.PI * 2);
+                floorCtx.fill();
+            }
+            
+            floorTexture.needsUpdate = true;
+        }
+        // ================================================
+
+        function init() {
+            const container = document.getElementById('three-container');
+            
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0a0a0a, 10, 50);
+            
+            worldGroup = new THREE.Group();
+            scene.add(worldGroup);
+            
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(4, 8, 4);
+            camera.lookAt(0, 0, 0);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setClearColor(0x0a0a0a, 1);
+            container.appendChild(renderer.domElement);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040, 1.2);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0x00ffff, 0.4, 100);
+            pointLight1.position.set(5, 5, 5);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xff00ff, 0.4, 100);
+            pointLight2.position.set(-5, -5, 5);
+            scene.add(pointLight2);
+            
+            createRelaxingFloorPlane();
+            createBackgroundParticles();
+            createDice(diceType);
+            setupEventListeners();
+            animate();
+        }
+
+        function createBackgroundParticles() {
+            const particleGeometry = new THREE.BufferGeometry();
+            const particleCount = 3000;
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            
+            for (let i = 0; i < particleCount; i++) {
+                const radius = 25 + Math.random() * 30;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                positions[i * 3 + 2] = radius * Math.cos(phi);
+                
+                velocities[i * 3] = (Math.random() - 0.5) * 0.02;
+                velocities[i * 3 + 1] = (Math.random() - 0.5) * 0.02;
+                velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.02;
+                
+                const color = Math.random() > 0.5 ? 
+                    new THREE.Color(0x00ffff) : 
+                    new THREE.Color(0xff00ff);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
+            particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.4,
+                transparent: true,
+                opacity: 0.9,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: true
+            });
+            
+            particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            worldGroup.add(particleSystem);
+        }
+
+        function getD10VerticesAndFaces() {
+            const sides = 10;
+            const radius = 1.8;
+            const vertices = [];
+            
+            vertices.push(new THREE.Vector3(0, 0, radius));
+            vertices.push(new THREE.Vector3(0, 0, -radius));
+            
+            for (let i = 0; i < sides; ++i) {
+                const angle = (i * Math.PI * 2) / sides;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                const z = 0;
+                vertices.push(new THREE.Vector3(x, y, z));
+            }
+            
+            const faces = [];
+            
+            for (let i = 0; i < 5; i++) {
+                const v1 = 2 + (i * 2 + 1) % 10;
+                const v2 = 2 + (i * 2 + 2) % 10;
+                const v3 = 2 + (i * 2 + 3) % 10;
+                
+                faces.push({
+                    pole: 0,
+                    v1: v1,
+                    v2: v2,
+                    v3: v3,
+                    hemisphere: 'north'
+                });
+            }
+            
+            for (let i = 0; i < 5; i++) {
+                const v1 = 2 + (i * 2) % 10;
+                const v2 = 2 + (i * 2 + 1) % 10;
+                const v3 = 2 + (i * 2 + 2) % 10;
+                
+                faces.push({
+                    pole: 1,
+                    v1: v1,
+                    v2: v2,
+                    v3: v3,
+                    hemisphere: 'south'
+                });
+            }
+            
+            return { vertices, faces };
+        }
+
+        function createDice(faces, forceReselectPhotos = true) {
+            let savedRotation = null;
+            if (dice && !isRolling) {
+                savedRotation = {
+                    x: dice.rotation.x,
+                    y: dice.rotation.y,
+                    z: dice.rotation.z
+                };
+            }
+            
+            if (dice) {
+                worldGroup.remove(dice);
+            }
+            
+            if (forceReselectPhotos) {
+                selectedPhotosForDice = selectPhotosForDice(faces);
+            }
+            
+            if (faces === 6) {
+                const geometry = new THREE.BoxGeometry(2, 2, 2);
+                const materials = createDiceMaterials(faces);
+                
+                dice = new THREE.Mesh(geometry, materials);
+                dice.position.set(dicePosition.x, dicePosition.y, dicePosition.z);
+                
+                if (savedRotation) {
+                    dice.rotation.x = savedRotation.x;
+                    dice.rotation.y = savedRotation.y;
+                    dice.rotation.z = savedRotation.z;
+                    diceRotation.x = savedRotation.x;
+                    diceRotation.y = savedRotation.y;
+                }
+                
+                worldGroup.add(dice);
+                
+                const edges = new THREE.EdgesGeometry(geometry);
+                const lineMaterial = new THREE.LineBasicMaterial({ 
+                    color: 0x00ffff, 
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const wireframe = new THREE.LineSegments(edges, lineMaterial);
+                dice.add(wireframe);
+            } else {
+                dice = new THREE.Group();
+                dice.position.set(dicePosition.x, dicePosition.y, dicePosition.z);
+                
+                if (savedRotation) {
+                    dice.rotation.x = savedRotation.x;
+                    dice.rotation.y = savedRotation.y;
+                    dice.rotation.z = savedRotation.z;
+                    diceRotation.x = savedRotation.x;
+                    diceRotation.y = savedRotation.y;
+                }
+                
+                worldGroup.add(dice);
+                
+                createPolyhedronFaces(faces);
+            }
+        }
+
+        function selectPhotosForDice(faces) {
+            if (photos.length === 0) return [];
+            
+            if (photos.length >= faces) {
+                const selectedIndices = new Set();
+                const result = [];
+                
+                while (selectedIndices.size < faces) {
+                    const randomIndex = Math.floor(Math.random() * photos.length);
+                    if (!selectedIndices.has(randomIndex)) {
+                        selectedIndices.add(randomIndex);
+                        result.push(photos[randomIndex]);
+                    }
+                }
+                
+                return result;
+            } else {
+                const result = [];
+                const indices = Array.from({length: photos.length}, (_, i) => i);
+                for (let i = indices.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [indices[i], indices[j]] = [indices[j], indices[i]];
+                }
+                
+                indices.forEach(idx => result.push(photos[idx]));
+                
+                while (result.length < faces) {
+                    const randomIndex = Math.floor(Math.random() * photos.length);
+                    result.push(photos[randomIndex]);
+                }
+                
+                return result;
+            }
+        }
+
+        function createDiceMaterials(faces) {
+            const materials = [];
+
+            let vertexToNumber = null;
+            if (faces === 4) {
+                const tempGeometry = new THREE.TetrahedronGeometry(1.8, 0);
+                const positions = tempGeometry.attributes.position.array;
+                
+                const uniqueVertices = [];
+                const vertexMap = new Map();
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i].toFixed(6);
+                    const y = positions[i + 1].toFixed(6);
+                    const z = positions[i + 2].toFixed(6);
+                    const key = `${x}_${y}_${z}`;
+                    
+                    if (!vertexMap.has(key)) {
+                        vertexMap.set(key, uniqueVertices.length + 1);
+                        uniqueVertices.push(key);
+                    }
+                }
+                
+                vertexToNumber = [];
+                for (let faceIndex = 0; faceIndex < 4; faceIndex++) {
+                    const faceMapping = { ovest: 0, est: 0, nord: 0 };
+                    
+                    for (let j = 0; j < 3; j++) {
+                        const idx = (faceIndex * 3 + j) * 3;
+                        const x = positions[idx].toFixed(6);
+                        const y = positions[idx + 1].toFixed(6);
+                        const z = positions[idx + 2].toFixed(6);
+                        const key = `${x}_${y}_${z}`;
+                        const number = vertexMap.get(key);
+                        
+                        if (j === 0) faceMapping.ovest = number;
+                        else if (j === 1) faceMapping.est = number;
+                        else faceMapping.nord = number;
+                    }
+                    
+                    vertexToNumber.push(faceMapping);
+                }
+            }
+
+            
+            for (let i = 0; i < faces; i++) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512;
+                canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = 'rgba(20, 20, 50, 0.7)';
+                ctx.fillRect(0, 0, 512, 512);
+                
+                const displayNumber = (faces === 10) ? i : i + 1;
+
+                const d4Layout = (faces === 4) ? vertexToNumber[i] : null;                
+                
+                if (showPhotos && photos.length > 0 && selectedPhotosForDice[i]) {
+                    try {
+                        ctx.drawImage(selectedPhotosForDice[i], 0, 0, 512, 512);
+                        ctx.strokeStyle = '#00ffff';
+                        ctx.lineWidth = 8;
+                        ctx.strokeRect(0, 0, 512, 512);
+                    } catch(e) {
+                        console.error('Errore nel disegno dell\'immagine:', e);
+                        drawNumber(ctx, displayNumber, faces);
+                    }
+                    } else {
+                        if (faces === 4 && d4Layout) {
+                            drawNumber(ctx, d4Layout, faces);
+                        } else {
+                            drawNumber(ctx, displayNumber, faces);
+                        }
+                    }
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.MeshPhongMaterial({
+                    map: texture,
+                    shininess: 100,
+                    specular: 0x00ffff,
+                    side: THREE.DoubleSide
+                });
+                
+                materials.push(material);
+            }
+            
+            return materials;
+        }
+        
+        function drawNumber(ctx, number, faces) {
+            if (faces === 4) {
+                const fontSize = 200;
+                const sqrt3 = Math.sqrt(3);
+                
+                const v1 = { x: 0, y: 512 };
+                const v2 = { x: 512, y: 512 };
+                const v3 = { x: 256, y: 0 };
+                
+                const centerX = (v1.x + v2.x + v3.x) / 3;
+                const centerY = (v1.y + v2.y + v3.y) / 3;
+                
+                const inset = 100;
+                
+                ctx.font = `bold ${fontSize}px Courier New`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                const layout = number;
+                
+                const positions = [
+                    { 
+                        x: v3.x + (centerX - v3.x) * (inset / Math.hypot(centerX - v3.x, centerY - v3.y)) * (inset / 60),
+                        y: v3.y + (centerY - v3.y) * (inset / Math.hypot(centerX - v3.x, centerY - v3.y)) * (inset / 60),
+                        angle: 0,
+                        number: layout.nord
+                    },
+                    { 
+                        x: v1.x + (centerX - v1.x) * (inset / Math.hypot(centerX - v1.x, centerY - v1.y)) * (inset / 60),
+                        y: v1.y + (centerY - v1.y) * (inset / Math.hypot(centerX - v1.x, centerY - v1.y)) * (inset / 60),
+                        angle: -120,
+                        number: layout.ovest
+                    },
+                    { 
+                        x: v2.x + (centerX - v2.x) * (inset / Math.hypot(centerX - v2.x, centerY - v2.y)) * (inset / 60),
+                        y: v2.y + (centerY - v2.y) * (inset / Math.hypot(centerX - v2.x, centerY - v2.y)) * (inset / 60),
+                        angle: 120,
+                        number: layout.est
+                    }
+                ];
+                
+                positions.forEach(pos => {
+                    ctx.save();
+                    ctx.translate(pos.x, pos.y);
+                    ctx.rotate(pos.angle * Math.PI / 180);
+                    
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00ffff';
+                    ctx.fillStyle = '#00ffff';
+                    ctx.fillText(pos.number, 0, 0);
+                    
+                    ctx.strokeStyle = '#ff00ff';
+                    ctx.lineWidth = 4;
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#ff00ff';
+                    ctx.strokeText(pos.number, 0, 0);
+                    
+                    ctx.restore();
+                });
+                
+                return;
+            }
+            
+            let fontSize = 280;
+            if (faces === 20) fontSize = 170;
+            if (faces === 12) fontSize = 240;
+            if (faces === 10) fontSize = 260;
+            
+            ctx.font = `bold ${fontSize}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#00ffff';
+            ctx.fillStyle = '#00ffff';
+            ctx.fillText(number, 256, 256);
+            
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 6;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ff00ff';
+            ctx.strokeText(number, 256, 256);
+        }
+
+        function createPolyhedronFaces(faces) {
+            let baseGeometry;
+            
+            if (faces === 10) {
+                createD10Faces();
+                return;
+            }
+            
+            switch(faces) {
+                case 4:
+                    baseGeometry = new THREE.TetrahedronGeometry(1.8, 0);
+                    break;
+                case 8:
+                    baseGeometry = new THREE.OctahedronGeometry(1.8, 0);
+                    break;
+                case 12:
+                    baseGeometry = new THREE.DodecahedronGeometry(1.8, 0);
+                    break;
+                case 20:
+                    baseGeometry = new THREE.IcosahedronGeometry(1.8, 0);
+                    break;
+            }
+
+            const materials = createDiceMaterials(faces);
+            
+            if (faces === 12) {
+                createD12Faces(baseGeometry, materials);
+            } else {
+                const positions = baseGeometry.attributes.position.array;
+                
+                for (let i = 0; i < faces; i++) {
+                    const faceGeometry = new THREE.BufferGeometry();
+                    const vertices = new Float32Array(9);
+                    const uvs = new Float32Array(6);
+                    
+                    for (let j = 0; j < 3; j++) {
+                        const srcIdx = (i * 3 + j) * 3;
+                        const dstIdx = j * 3;
+                        
+                        vertices[dstIdx] = positions[srcIdx];
+                        vertices[dstIdx + 1] = positions[srcIdx + 1];
+                        vertices[dstIdx + 2] = positions[srcIdx + 2];
+                        
+                        const uvIdx = j * 2;
+                        uvs[uvIdx] = j === 0 ? 0 : j === 1 ? 1 : 0.5;
+                        uvs[uvIdx + 1] = j < 2 ? 0 : 1;
+                    }
+                    
+                    faceGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                    faceGeometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+                    faceGeometry.computeVertexNormals();
+                    
+                    const faceMesh = new THREE.Mesh(faceGeometry, materials[i]);
+                    dice.add(faceMesh);
+                }
+            }
+            
+            const edges = new THREE.EdgesGeometry(baseGeometry);
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            const wireframe = new THREE.LineSegments(edges, lineMaterial);
+            dice.add(wireframe);
+        }
+        
+        function createD10Faces() {
+            const materials = createDiceMaterials(10);
+            const structure = getD10VerticesAndFaces();
+            
+            structure.faces.forEach((face, faceIndex) => {
+                const faceGeometry = new THREE.BufferGeometry();
+                
+                const pole = structure.vertices[face.pole];
+                const v1 = structure.vertices[face.v1];
+                const v2 = structure.vertices[face.v2];
+                const v3 = structure.vertices[face.v3];
+                
+                const positions = [];
+                const uvs = [];
+                const indices = [];
+                
+                if (face.hemisphere === 'north') {
+                    positions.push(
+                        pole.x, pole.y, pole.z,
+                        v1.x, v1.y, v1.z,
+                        v2.x, v2.y, v2.z,
+                        v3.x, v3.y, v3.z
+                    );
+                    
+                    uvs.push(
+                        0.5, 1.0,
+                        0.0, 0.0,
+                        0.5, 0.0,
+                        1.0, 0.0
+                    );
+                    
+                    indices.push(
+                        0, 1, 2,
+                        0, 2, 3
+                    );
+                } else {
+                    positions.push(
+                        pole.x, pole.y, pole.z,
+                        v1.x, v1.y, v1.z,
+                        v2.x, v2.y, v2.z,
+                        v3.x, v3.y, v3.z
+                    );
+                    
+                    uvs.push(
+                        0.5, 1.0,
+                        1.0, 0.0,
+                        0.5, 0.0,
+                        0.0, 0.0
+                    );
+                    
+                    indices.push(
+                        0, 2, 1,
+                        0, 3, 2
+                    );
+                }
+                
+                faceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+                faceGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                faceGeometry.setIndex(indices);
+                
+                const p0 = new THREE.Vector3(positions[0], positions[1], positions[2]);
+                const p1 = new THREE.Vector3(positions[3], positions[4], positions[5]);
+                const p2 = new THREE.Vector3(positions[6], positions[7], positions[8]);
+                
+                const edge1 = new THREE.Vector3().subVectors(p1, p0);
+                const edge2 = new THREE.Vector3().subVectors(p2, p0);
+                const faceNormal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                
+                const normals = new Float32Array([
+                    faceNormal.x, faceNormal.y, faceNormal.z,
+                    faceNormal.x, faceNormal.y, faceNormal.z,
+                    faceNormal.x, faceNormal.y, faceNormal.z,
+                    faceNormal.x, faceNormal.y, faceNormal.z
+                ]);
+                faceGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+                
+                const faceMesh = new THREE.Mesh(faceGeometry, materials[faceIndex]);
+                dice.add(faceMesh);
+            });
+            
+            const edgeGeometry = new THREE.BufferGeometry();
+            const edgeVertices = [];
+
+            structure.faces.forEach(face => {
+                const pole = structure.vertices[face.pole];
+                const v1 = structure.vertices[face.v1];
+                const v3 = structure.vertices[face.v3];
+                
+                edgeVertices.push(
+                    pole.x, pole.y, pole.z,
+                    v1.x, v1.y, v1.z
+                );
+                edgeVertices.push(
+                    pole.x, pole.y, pole.z,
+                    v3.x, v3.y, v3.z
+                );
+            });
+
+            for (let i = 0; i < 10; i++) {
+                const v1 = structure.vertices[2 + i];
+                const v2 = structure.vertices[2 + ((i + 1) % 10)];
+                edgeVertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z);
+            }
+
+            edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edgeVertices, 3));
+            const edgeMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            const wireframe = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+            dice.add(wireframe);
+        }
+
+        function createD12Faces(baseGeometry, materials) {
+            const positions = baseGeometry.attributes.position.array;
+            
+            for (let faceIndex = 0; faceIndex < 12; faceIndex++) {
+                const faceGeometry = new THREE.BufferGeometry();
+                const vertices = [];
+                const vertexPositions = [];
+                
+                for (let t = 0; t < 3; t++) {
+                    for (let v = 0; v < 3; v++) {
+                        const idx = (faceIndex * 9 + t * 3 + v) * 3;
+                        const x = positions[idx];
+                        const y = positions[idx + 1];
+                        const z = positions[idx + 2];
+                        
+                        vertices.push(x, y, z);
+                        vertexPositions.push(new THREE.Vector3(x, y, z));
+                    }
+                }
+                
+                const center = new THREE.Vector3();
+                vertexPositions.forEach(v => center.add(v));
+                center.divideScalar(vertexPositions.length);
+                
+                const edge1 = vertexPositions[1].clone().sub(vertexPositions[0]);
+                const edge2 = vertexPositions[2].clone().sub(vertexPositions[0]);
+                const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                
+                const uAxis = edge1.clone().normalize();
+                const vAxis = new THREE.Vector3().crossVectors(normal, uAxis).normalize();
+                
+                const uvs = [];
+                const uvCoords = [];
+                
+                vertexPositions.forEach(vertex => {
+                    const relative = vertex.clone().sub(center);
+                    const u = relative.dot(uAxis);
+                    const v = relative.dot(vAxis);
+                    uvCoords.push({ u, v });
+                });
+                
+                let minU = Infinity, maxU = -Infinity;
+                let minV = Infinity, maxV = -Infinity;
+                
+                uvCoords.forEach(coord => {
+                    minU = Math.min(minU, coord.u);
+                    maxU = Math.max(maxU, coord.u);
+                    minV = Math.min(minV, coord.v);
+                    maxV = Math.max(maxV, coord.v);
+                });
+                
+                const rangeU = maxU - minU || 1;
+                const rangeV = maxV - minV || 1;
+                const range = Math.max(rangeU, rangeV);
+                const centerU = (minU + maxU) / 2;
+                const centerV = (minV + maxV) / 2;
+                
+                const vertexToUV = new Map();
+                
+                vertexPositions.forEach((vertex, i) => {
+                    const key = `${vertex.x.toFixed(5)}_${vertex.y.toFixed(5)}_${vertex.z.toFixed(5)}`;
+                    
+                    if (!vertexToUV.has(key)) {
+                        const normalizedU = 0.5 + (uvCoords[i].u - centerU) / range * 0.9;
+                        const normalizedV = 0.5 + (uvCoords[i].v - centerV) / range * 0.9;
+                        vertexToUV.set(key, { u: normalizedU, v: normalizedV });
+                    }
+                    
+                    const uv = vertexToUV.get(key);
+                    uvs.push(uv.u, uv.v);
+                });
+                
+                faceGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                faceGeometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+                faceGeometry.computeVertexNormals();
+                
+                const faceMesh = new THREE.Mesh(faceGeometry, materials[faceIndex]);
+                dice.add(faceMesh);
+            }
+        }
+
+        function syncDiceRotation() {
+            if (dice) {
+                diceRotation.x = dice.rotation.x;
+                diceRotation.y = dice.rotation.y;
+            }
+        }
+
+        function setupEventListeners() {
+            const container = renderer.domElement;
+            
+            container.addEventListener('mousedown', (e) => {
+                if (e.button === 0) {
+                    syncDiceRotation();
+                    isDragging = true;
+                    resultShown = false;
+                    hideResult();
+                } else if (e.button === 1) {
+                    e.preventDefault();
+                    syncDiceRotation();
+                    isPanning = true;
+                    resultShown = false;
+                    hideResult();
+                } else if (e.button === 2) {
+                    isRotatingView = true;
+                }
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            container.addEventListener('mousemove', (e) => {
+                if (isDragging && !isRolling) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+                    
+                    diceRotation.y += deltaX * 0.01;
+                    diceRotation.x += deltaY * 0.01;
+                    
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                } else if (isPanning && !isRolling) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    const deltaY = e.clientY - previousMousePosition.y;
+                    
+                    const worldGroupMatrixInverse = new THREE.Matrix4();
+                    worldGroupMatrixInverse.copy(worldGroup.matrix).invert();
+                    
+                    const cameraRight = new THREE.Vector3(1, 0, 0);
+                    cameraRight.applyQuaternion(camera.quaternion);
+                    cameraRight.y = 0;
+                    cameraRight.normalize();
+                    
+                    const cameraUp = new THREE.Vector3(0, 1, 0);
+                    
+                    const cameraForward = new THREE.Vector3(0, 0, -1);
+                    cameraForward.applyQuaternion(camera.quaternion);
+                    cameraForward.y = 0;
+                    cameraForward.normalize();
+                    
+                    const worldMove = new THREE.Vector3();
+                    worldMove.addScaledVector(cameraRight, deltaX * 0.01);
+                    worldMove.addScaledVector(cameraUp, -deltaY * 0.01);
+                    
+                    if (e.shiftKey) {
+                        worldMove.y = 0;
+                        worldMove.addScaledVector(cameraForward, -deltaY * 0.01);
+                    }
+                    
+                    const localMove = worldMove.clone();
+                    localMove.applyMatrix4(worldGroupMatrixInverse);
+                    localMove.y = worldMove.y;
+                    
+                    dicePosition.x += localMove.x;
+                    dicePosition.y += localMove.y;
+                    dicePosition.z += localMove.z;
+                    
+                    dicePosition.y = Math.max(-0.9, dicePosition.y);
+                    
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                } else if (isRotatingView) {
+                    const deltaX = e.clientX - previousMousePosition.x;
+                    viewRotationY += deltaX * 0.01;
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+            
+            container.addEventListener('mouseup', () => {
+                isDragging = false;
+                isPanning = false;
+                isRotatingView = false;
+            });
+            
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (resultShown) {
+                    syncDiceRotation();
+                }
+                resultShown = false;
+                hideResult();
+                targetZoom += e.deltaY * 0.01;
+                targetZoom = Math.max(2, Math.min(targetZoom, 20));
+            });
+            
+            container.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            container.addEventListener('dblclick', onDiceDoubleClick);
+            
+            document.getElementById('photoFullscreenOverlay').addEventListener('dblclick', closeFullscreenPhoto);
+
+            // Doppio click sul canvas risultato per aprire foto fullscreen
+            document.getElementById('resultPreview').addEventListener('dblclick', () => {
+                if (showPhotos && lastDiceResult !== null && selectedPhotosForDice.length > 0) {
+                    const faceIndex = diceType === 10 ? lastDiceResult : lastDiceResult - 1;
+                    if (selectedPhotosForDice[faceIndex]) {
+                        showFullscreenPhoto(selectedPhotosForDice[faceIndex], faceIndex);
+                    }
+                }
+            });            
+
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' || e.key === ' ') {
+                    e.preventDefault();
+                    rollDice();
+                }
+                if (e.code === 'KeyV' || e.key === 'v' || e.key === 'V') {
+                    e.preventDefault();
+                    togglePhotoMode();
+                }
+                if (e.key === 'Escape' && document.getElementById('photoFullscreenOverlay').classList.contains('active')) {
+                    closeFullscreenPhoto();
+                }
+                if (document.getElementById('photoFullscreenOverlay').classList.contains('active')) {
+                    if (e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        navigatePhoto(-1);
+                    } else if (e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        navigatePhoto(1);
+                    }
+                }
+            });
+            
+            document.getElementById('slideshowInterval').addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                document.getElementById('slideshowIntervalValue').textContent = value + 's';
+                
+                if (slideshowActive) {
+                    stopSlideshow();
+                    startSlideshow();
+                }
+            });
+            
+            window.addEventListener('resize', onWindowResize);
+            
+            const diceTypes = [4, 6, 8, 10, 12, 20];
+            const diceNames = ['D4 - Tetraedro', 'D6 - Cubo', 'D8 - Ottaedro', 'D10 - Trapezoedro', 'D12 - Dodecaedro', 'D20 - Icosaedro'];
+            
+            document.getElementById('diceType').addEventListener('input', (e) => {
+                const index = parseInt(e.target.value);
+                diceType = diceTypes[index];
+                document.getElementById('diceLabel').textContent = diceNames[index];
+                createDice(diceType, false);
+            });
+            
+            document.getElementById('rollDice').addEventListener('click', rollDice);
+            document.getElementById('resetView').addEventListener('click', resetView);
+            document.getElementById('toggleMenu').addEventListener('click', toggleMenu);
+            document.getElementById('photoUpload').addEventListener('change', handlePhotoUpload);
+            document.getElementById('deleteAllPhotos').addEventListener('click', deleteAllPhotos);
+            document.getElementById('photoToggle').addEventListener('click', togglePhotoMode);            
+        }
+
+        function handlePhotoUpload(e) {
+            const files = Array.from(e.target.files);
+            const remaining = 50 - photos.length;
+            const toAdd = files.slice(0, remaining);
+            
+            let loaded = 0;
+            toAdd.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        photos.push(img);
+                        loaded++;
+                        if (loaded === toAdd.length) {
+                            updatePhotoList();
+                            createDice(diceType);
+                        }
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updatePhotoList() {
+            document.getElementById('photoCount').textContent = photos.length;
+            const list = document.getElementById('photoList');
+            list.innerHTML = '';
+            
+            photos.forEach((photo, index) => {
+                const item = document.createElement('div');
+                item.className = 'photo-item';
+                
+                const img = document.createElement('img');
+                img.src = photo.src;
+                img.className = 'photo-thumbnail';
+                img.title = `Foto ${index + 1}`;
+                
+                const btn = document.createElement('button');
+                btn.className = 'photo-delete-btn';
+                btn.textContent = '✕';
+                btn.onclick = () => deletePhoto(index);
+                
+                item.appendChild(img);
+                item.appendChild(btn);
+                list.appendChild(item);
+            });
+        }
+
+        function deletePhoto(index) {
+            photos.splice(index, 1);
+            updatePhotoList();
+            createDice(diceType);
+        }
+
+        function deleteAllPhotos() {
+            if (photos.length === 0) return;
+            
+            if (confirm('Sei sicuro di voler eliminare tutte le foto?')) {
+                photos = [];
+                updatePhotoList();
+                createDice(diceType);
+            }
+        }
+
+        function rollDice() {
+            if (isRolling) return;
+            
+            isRolling = true;
+            resultShown = false;
+            hideResult();
+            
+            createDice(diceType);
+            
+            dicePosition.y = 2;
+            
+            const targetRotationX = Math.random() * Math.PI * 4 + Math.PI * 2;
+            const targetRotationY = Math.random() * Math.PI * 4 + Math.PI * 2;
+            const targetRotationZ = Math.random() * Math.PI * 4 + Math.PI * 2;
+            
+            const startRotationX = dice.rotation.x;
+            const startRotationY = dice.rotation.y;
+            const startRotationZ = dice.rotation.z;
+            
+            const startZoom = currentZoom;
+            const zoomOutValue = 10;
+            
+            const duration = 2000;
+            const startTime = Date.now();
+            
+            function animateRoll() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                if (elapsed < 300) {
+                    const zoomProgress = elapsed / 300;
+                    targetZoom = startZoom + (zoomOutValue - startZoom) * zoomProgress;
+                } else if (elapsed < 600) {
+                    const zoomProgress = (elapsed - 300) / 300;
+                    targetZoom = zoomOutValue + (startZoom - zoomOutValue) * zoomProgress;
+                }
+                
+                dice.rotation.x = startRotationX + (targetRotationX - startRotationX) * eased;
+                dice.rotation.y = startRotationY + (targetRotationY - startRotationY) * eased;
+                dice.rotation.z = startRotationZ + (targetRotationZ - startRotationZ) * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateRoll);
+                } else {
+                    isRolling = false;
+                    showResult();
+                }
+            }
+            
+            animateRoll();
+        }
+
+        // NUOVO: Calcola il risultato del dado in base alla faccia superiore (rivolta a nord/alto)
+        function calculateDiceResult() {
+            if (!dice) return null;
+            
+            if (diceType === 4) {
+                // D4: trova il vertice più in alto
+                const tempGeometry = new THREE.TetrahedronGeometry(1.8, 0);
+                const positions = tempGeometry.attributes.position.array;
+                
+                // Crea mappa vertice -> numero
+                const vertexMap = new Map();
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i].toFixed(6);
+                    const y = positions[i + 1].toFixed(6);
+                    const z = positions[i + 2].toFixed(6);
+                    const key = `${x}_${y}_${z}`;
+                    
+                    if (!vertexMap.has(key)) {
+                        vertexMap.set(key, vertexMap.size + 1);
+                    }
+                }
+                
+                // Trova il vertice più alto dopo la rotazione
+                let highestY = -Infinity;
+                let topVertexNumber = 1;
+                
+                vertexMap.forEach((number, key) => {
+                    const [x, y, z] = key.split('_').map(parseFloat);
+                    const vertex = new THREE.Vector3(x, y, z);
+                    vertex.applyQuaternion(dice.quaternion);
+                    
+                    if (vertex.y > highestY) {
+                        highestY = vertex.y;
+                        topVertexNumber = number;
+                    }
+                });
+                
+                return topVertexNumber;
+            }
+            
+            // Per tutti gli altri dadi: trova la faccia superiore (normale verso l'alto)
+            const faceData = getFaceNormals(diceType);
+            let highestFace = -Infinity;
+            let topFaceIndex = 0;
+            
+            faceData.forEach((data, index) => {
+                const worldNormal = data.normal.clone().applyQuaternion(dice.quaternion);
+                if (worldNormal.y > highestFace) {
+                    highestFace = worldNormal.y;
+                    topFaceIndex = index;
+                }
+            });
+            
+            // Il risultato è il numero sulla faccia superiore
+            if (diceType === 10) {
+                return topFaceIndex; // D10 va da 0 a 9
+            } else {
+                return topFaceIndex + 1; // Altri dadi: indice + 1
+            }
+        }
+
+        function showResult() {
+            resultShown = true;
+            
+            const winningFace = findWinningFace();
+            
+            const targetPos = { x: 0, y: 0, z: 0 };
+            const startPos = { x: dicePosition.x, y: dicePosition.y, z: dicePosition.z };
+            const startZoom = currentZoom;
+            const targetZoomValue = 7;
+            
+            const startRotation = {
+                x: dice.rotation.x,
+                y: dice.rotation.y,
+                z: dice.rotation.z
+            };
+            
+            const duration = 1500;
+            const startTime = Date.now();
+            
+            function animateResult() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                dicePosition.x = startPos.x + (targetPos.x - startPos.x) * eased;
+                dicePosition.y = startPos.y + (targetPos.y - startPos.y) * eased;
+                dicePosition.z = startPos.z + (targetPos.z - startPos.z) * eased;
+                
+                if (progress > 0.8) {
+                    const bounceProgress = (progress - 0.8) / 0.2;
+                    const bounce = Math.sin(bounceProgress * Math.PI) * 0.1;
+                    dicePosition.y += bounce;
+                }
+                
+                targetZoom = startZoom + (targetZoomValue - startZoom) * eased;
+                
+                dice.rotation.x = startRotation.x + (winningFace.targetRotation.x - startRotation.x) * eased;
+                dice.rotation.y = startRotation.y + (winningFace.targetRotation.y - startRotation.y) * eased;
+                dice.rotation.z = startRotation.z + (winningFace.targetRotation.z - startRotation.z) * eased;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateResult);
+                } else {
+                    syncDiceRotation();
+                    // NUOVO: Calcola e mostra il risultato
+                    const result = calculateDiceResult();
+                    if (result !== null) {
+                        displayResult(result);
+                    }
+                }
+            }
+            
+            animateResult();
+        }
+        
+        function findWinningFace() {
+            const cameraDirection = new THREE.Vector3(0, 0, -1);
+            cameraDirection.applyQuaternion(camera.quaternion);
+            
+            let closestFace = null;
+            let maxDot = -Infinity;
+            
+            const faceData = getFaceNormals(diceType);
+            
+            faceData.forEach((data, index) => {
+                const worldNormal = data.normal.clone().applyQuaternion(dice.quaternion);
+                const dot = worldNormal.dot(cameraDirection);
+                
+                if (dot > maxDot) {
+                    maxDot = dot;
+                    closestFace = index;
+                }
+            });
+            
+            const faceInfo = faceData[closestFace];
+            const targetRotation = calculateTargetRotation(faceInfo.normal, faceInfo.up);
+            
+            return { faceIndex: closestFace, targetRotation };
+        }
+
+        function togglePhotoMode() {
+            showPhotos = !showPhotos;
+            
+            const toggle = document.getElementById('photoToggle');
+            const labelNum = document.getElementById('labelNum');
+            const labelPhoto = document.getElementById('labelPhoto');
+            
+            if (showPhotos) {
+                toggle.classList.add('active');
+                labelPhoto.classList.add('active');
+                labelPhoto.classList.remove('inactive');
+                labelNum.classList.add('inactive');
+                labelNum.classList.remove('active');
+            } else {
+                toggle.classList.remove('active');
+                labelNum.classList.add('active');
+                labelNum.classList.remove('inactive');
+                labelPhoto.classList.add('inactive');
+                labelPhoto.classList.remove('active');
+            }
+            
+            // NUOVO: Aggiorna la visibilità del canvas di preview se c'è un risultato mostrato
+            if (lastDiceResult !== null) {
+                const canvas = document.getElementById('resultPreview');
+                if (showPhotos) {
+                    canvas.style.display = 'block';
+                } else {
+                    canvas.style.display = 'none';
+                }
+            }
+            
+            createDice(diceType, false);
+        }        
+
+        function getFaceNormals(faces) {
+            const data = [];
+            
+            if (faces === 6) {
+                data.push({ normal: new THREE.Vector3(1, 0, 0), up: new THREE.Vector3(0, 1, 0) });
+                data.push({ normal: new THREE.Vector3(-1, 0, 0), up: new THREE.Vector3(0, 1, 0) });
+                data.push({ normal: new THREE.Vector3(0, 1, 0), up: new THREE.Vector3(0, 0, 1) });
+                data.push({ normal: new THREE.Vector3(0, -1, 0), up: new THREE.Vector3(0, 0, 1) });
+                data.push({ normal: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0) });
+                data.push({ normal: new THREE.Vector3(0, 0, -1), up: new THREE.Vector3(0, 1, 0) });
+            } else if (faces === 10) {
+                const structure = getD10VerticesAndFaces();
+                structure.faces.forEach(face => {
+                    const pole = structure.vertices[face.pole];
+                    const v1 = structure.vertices[face.v1];
+                    const v2 = structure.vertices[face.v2];
+                    
+                    const edge1 = new THREE.Vector3().subVectors(v1, pole);
+                    const edge2 = new THREE.Vector3().subVectors(v2, pole);
+                    const normal = new THREE.Vector3().crossVectors(edge1, edge2).normalize();
+                    
+                    if (face.hemisphere === 'south') {
+                        normal.multiplyScalar(-1);
+                    }
+                    
+                    const up = edge1.clone().normalize();
+                    
+                    data.push({ normal, up });
+                });
+            } else {
+                let geometry;
+                switch(faces) {
+                    case 4:
+                        geometry = new THREE.TetrahedronGeometry(1.8, 0);
+                        break;
+                    case 8:
+                        geometry = new THREE.OctahedronGeometry(1.8, 0);
+                        break;
+                    case 12:
+                        geometry = new THREE.DodecahedronGeometry(1.8, 0);
+                        break;
+                    case 20:
+                        geometry = new THREE.IcosahedronGeometry(1.8, 0);
+                        break;
+                }
+                
+                const positions = geometry.attributes.position.array;
+                const trianglesPerFace = faces === 12 ? 3 : 1;
+                
+                for (let i = 0; i < faces; i++) {
+                    const v1 = new THREE.Vector3(
+                        positions[(i * trianglesPerFace * 3) * 3],
+                        positions[(i * trianglesPerFace * 3) * 3 + 1],
+                        positions[(i * trianglesPerFace * 3) * 3 + 2]
+                    );
+                    const v2 = new THREE.Vector3(
+                        positions[(i * trianglesPerFace * 3 + 1) * 3],
+                        positions[(i * trianglesPerFace * 3 + 1) * 3 + 1],
+                        positions[(i * trianglesPerFace * 3 + 1) * 3 + 2]
+                    );
+                    const v3 = new THREE.Vector3(
+                        positions[(i * trianglesPerFace * 3 + 2) * 3],
+                        positions[(i * trianglesPerFace * 3 + 2) * 3 + 1],
+                        positions[(i * trianglesPerFace * 3 + 2) * 3 + 2]
+                    );
+                    
+                    const edge1 = v2.clone().sub(v1);
+                    const edge2 = v3.clone().sub(v1);
+                    const normal = new THREE.Vector3();
+                    normal.crossVectors(edge1, edge2).normalize();
+                    
+                    const up = edge1.clone().normalize();
+                    
+                    data.push({ normal, up });
+                }
+            }
+            
+            return data;
+        }
+        
+        function calculateTargetRotation(faceNormal, faceUp) {
+            const normal = faceNormal.clone().normalize();
+            const up = faceUp.clone().normalize();
+            
+            const targetNormal = new THREE.Vector3(0, -1, 0);
+            
+            const quaternion = new THREE.Quaternion();
+            quaternion.setFromUnitVectors(normal, targetNormal);
+            
+            const rotatedUp = up.clone().applyQuaternion(quaternion);
+            
+            rotatedUp.y = 0;
+            rotatedUp.normalize();
+            
+            const targetUp = new THREE.Vector3(0, 0, -1);
+            const angleY = Math.atan2(rotatedUp.x, rotatedUp.z) - Math.atan2(targetUp.x, targetUp.z);
+            
+            const finalQuaternion = new THREE.Quaternion();
+            finalQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleY);
+            finalQuaternion.multiply(quaternion);
+            
+            const euler = new THREE.Euler();
+            euler.setFromQuaternion(finalQuaternion, 'XYZ');
+            
+            return {
+                x: euler.x,
+                y: euler.y,
+                z: euler.z
+            };
+        }
+
+        function resetView() {
+            dicePosition = { x: 0, y: 0, z: 0 };
+            diceRotation = { x: 0, y: 0 };
+            targetZoom = 5;
+            viewRotationY = 0;
+            resultShown = false;
+            hideResult();
+            
+            if (dice) {
+                dice.rotation.set(0, 0, 0);
+            }
+            
+            camera.position.set(4, 8, 4);
+            camera.lookAt(0, 0, 0);
+        }
+
+        function toggleMenu() {
+            menuOpen = !menuOpen;
+            const menu = document.getElementById('menu');
+            const toggleBtn = document.getElementById('toggleMenu');
+            const container = document.getElementById('canvas-container');
+            
+            if (menuOpen) {
+                menu.style.left = '0';
+                toggleBtn.style.left = '320px';
+                toggleBtn.textContent = '◀';
+                container.style.left = '320px';
+            } else {
+                menu.style.left = '-320px';
+                toggleBtn.style.left = '0';
+                toggleBtn.textContent = '▶';
+                container.style.left = '0';
+            }
+            
+            setTimeout(onWindowResize, 500);
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('three-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            currentZoom += (targetZoom - currentZoom) * 0.1;
+            const zoomFactor = currentZoom / 5;
+            camera.position.set(4 * zoomFactor, 8 * zoomFactor, 4 * zoomFactor);
+            camera.lookAt(0, 0, 0);
+            
+            worldGroup.rotation.y = viewRotationY;
+            
+            if (dice && !isRolling && !resultShown) {
+                dice.rotation.x = diceRotation.x;
+                dice.rotation.y = diceRotation.y;
+            }
+            
+            if (dice) {
+                dice.position.x = dicePosition.x;
+                dice.position.y = dicePosition.y;
+                dice.position.z = dicePosition.z;
+            }
+            
+            updateDynamicFloorAnimation();
+            
+            if (particleSystem) {
+                const positions = particleSystem.geometry.attributes.position.array;
+                const velocities = particleSystem.geometry.attributes.velocity.array;
+                
+                for (let i = 0; i < positions.length / 3; i++) {
+                    const idx = i * 3;
+                    
+                    positions[idx] += velocities[idx];
+                    positions[idx + 1] += velocities[idx + 1];
+                    positions[idx + 2] += velocities[idx + 2];
+                    
+                    const x = positions[idx];
+                    const y = positions[idx + 1];
+                    const z = positions[idx + 2];
+                    const distance = Math.sqrt(x * x + y * y + z * z);
+                    
+                    if (distance > 55 || distance < 25) {
+                        const radius = 25 + Math.random() * 30;
+                        const theta = Math.random() * Math.PI * 2;
+                        const phi = Math.random() * Math.PI;
+                        
+                        positions[idx] = radius * Math.sin(phi) * Math.cos(theta);
+                        positions[idx + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                        positions[idx + 2] = radius * Math.cos(phi);
+                    }
+                }
+                
+                particleSystem.geometry.attributes.position.needsUpdate = true;
+                
+                const material = particleSystem.material;
+                material.opacity = 0.8 + Math.sin(Date.now() * 0.002) * 0.2;
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        function toggleControls() {
+            const overlay = document.getElementById('controlsOverlay');
+            overlay.classList.toggle('minimized');
+        }
+
+        init();
+    </script>
+</body>
+</html>        

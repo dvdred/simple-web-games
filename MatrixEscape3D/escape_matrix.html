@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix Escape 3D - Fuggi dalla Matrix</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: #000;
+            color: #0f0;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        #ui-overlay > * {
+            pointer-events: auto;
+        }
+        
+        .matrix-text {
+            text-shadow: 0 0 10px #0f0;
+        }
+        
+        .btn-matrix {
+            border: 2px solid #0f0;
+            background: rgba(0, 0, 0, 0.8);
+            color: #0f0;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .btn-matrix:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px #0f0;
+        }
+        
+        .stat-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #0f0;
+            backdrop-filter: blur(5px);
+        }
+        
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); filter: hue-rotate(0deg); }
+            25% { transform: translate(-5px, 5px); filter: hue-rotate(90deg); }
+            50% { transform: translate(5px, -5px); filter: hue-rotate(180deg); }
+            75% { transform: translate(-5px, -5px); filter: hue-rotate(270deg); }
+        }
+        
+        .glitch-effect {
+            animation: glitch 0.3s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas for 3D rendering -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay">
+        <!-- Header -->
+        <div class="text-center pt-4">
+            <h1 class="text-3xl md:text-5xl font-bold matrix-text mb-1">MATRIX ESCAPE 3D</h1>
+            <p id="subtitle" class="text-sm md:text-lg text-green-400">Scappa dagli Agenti e trova il Telefono!</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="flex justify-around items-center px-4 py-3 mt-3 mx-auto max-w-3xl">
+            <div class="stat-panel px-4 py-2 rounded text-center">
+                <div id="labelLevel" class="text-xs text-green-400">Livello</div>
+                <div id="level" class="text-2xl font-bold">1</div>
+            </div>
+            <div class="stat-panel px-4 py-2 rounded text-center">
+                <div id="labelMoves" class="text-xs text-green-400">Mosse</div>
+                <div id="moves" class="text-2xl font-bold">0</div>
+            </div>
+            <div class="stat-panel px-4 py-2 rounded text-center">
+                <div id="labelTimer" class="text-xs text-green-400">Timer</div>
+                <div id="timer" class="text-2xl font-bold">0s</div>
+            </div>
+        </div>
+
+        <!-- Controls - Positioned on the right side -->
+        <div class="absolute top-1/2 right-4 transform -translate-y-1/2">
+            <div class="stat-panel px-4 py-4 rounded">
+                <p id="labelControls" class="text-xs text-green-400 mb-3 text-center font-bold">CONTROLLI</p>
+                <p id="controlKeys" class="text-xs text-green-400 mb-2">🎮 WASD / Frecce</p>
+                <p id="controlZoom" class="text-xs text-green-400 mb-2">🖱️ Rotella: Zoom</p>
+                <p id="controlRotate" class="text-xs text-green-400 mb-4">🖱️ Tasto centrale: Ruota</p>
+                <div class="flex flex-col gap-2">
+                    <button id="btnRestart" class="btn-matrix px-3 py-2 rounded font-bold text-xs hidden">RIAVVIA LIVELLO</button>
+                    <button id="btnNewGame" class="btn-matrix px-3 py-2 rounded font-bold text-xs">NUOVA PARTITA</button>
+                </div>
+                
+                <!-- Language selector moved here -->
+                <div class="mt-4">
+                    <p id="langLabel" class="text-sm text-green-400 mb-2 font-bold">LANGUAGE / LINGUA / IDIOMA</p>
+                    <div class="relative">
+                        <button id="btnLangCurrent" class="btn-matrix px-4 py-2 rounded font-bold text-sm w-full hover:scale-105 transition-transform flex items-center justify-between">
+                            <span id="currentLangText">🇬🇧 ENGLISH</span>
+                            <span>▼</span>
+                        </button>
+                        <div id="langDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-black border-2 border-green-500 rounded z-10" style="max-height: 240px; overflow-y: scroll; overflow-x: hidden;">
+                            <!-- Scroll buttons -->
+                            <div class="flex sticky top-0 bg-black z-20 border-b-2 border-green-500">
+                                <button id="btnScrollUp" class="btn-matrix w-1/2 px-2 py-1 text-center hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none text-lg">▲</button>
+                                <button id="btnScrollDown" class="btn-matrix w-1/2 px-2 py-1 text-center hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none text-lg">▼</button>
+                            </div>
+                            <button id="btnLangEN" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇬🇧 ENGLISH
+                            </button>
+                            <button id="btnLangIT" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇮🇹 ITALIANO
+                            </button>
+                            <button id="btnLangES" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇪🇸 ESPAÑOL
+                            </button>
+                            <button id="btnLangFA" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇮🇷 فارسی
+                            </button>
+                            <button id="btnLangFR" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇫🇷 FRANÇAIS
+                            </button>
+                            <button id="btnLangDE" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇩🇪 DEUTSCH
+                            </button>
+                            <button id="btnLangPT" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇵🇹 PORTUGUÊS
+                            </button>
+                            <button id="btnLangRU" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇷🇺 РУССКИЙ
+                            </button>
+                            <button id="btnLangZH" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇨🇳 中文
+                            </button>
+                            <button id="btnLangJA" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇯🇵 日本語
+                            </button>
+                            <button id="btnLangAR" class="btn-matrix w-full px-4 py-2 text-left hover:bg-green-500 hover:text-black transition-colors border-0 rounded-none">
+                                🇸🇦 العربية
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend - Bottom left -->
+        <div class="absolute bottom-4 left-4">
+            <div class="stat-panel px-3 py-2 rounded text-xs">
+                <div class="mb-1">⚪ Neo</div>
+                <div id="legendAgents" class="mb-1">🟣 Agenti</div>
+                <div id="legendPhone" class="mb-1">🟢 Telefono</div>
+                <div id="legendWalls" class="mb-1">⬛ Muri</div>
+                <div id="legendRedPill" class="mb-1">🔴 Pillola Rossa (elimina bot)</div>
+                <div id="legendBluePill">💙 Pillola Blu (allontana uscita)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+        <div class="bg-black border-4 border-green-500 p-8 rounded-lg text-center max-w-md mx-4">
+            <h2 id="modalTitle" class="text-3xl font-bold mb-4 matrix-text"></h2>
+            <p id="modalMessage" class="text-xl mb-6"></p>
+            <button id="modalBtn" class="btn-matrix px-8 py-3 rounded font-bold text-xl">CONTINUA</button>
+        </div>
+    </div>
+
+    <!-- Difficulty Selection Modal -->
+    <div id="difficultyModal" class="fixed inset-0 bg-black bg-opacity-95 flex items-end justify-center pb-8 z-50">
+        <div class="bg-black border-4 border-green-500 p-4 rounded-lg text-center max-w-md mx-4">
+            <h2 id="difficultyTitle" class="text-2xl font-bold mb-4 matrix-text">SCEGLI DIFFICOLTÀ E DIMENSIONE</h2>
+            
+            <p id="difficultyLabel" class="text-sm text-green-400 mb-2 font-bold">DIFFICOLTÀ</p>
+            <div class="flex flex-col gap-2 mb-4">
+                <button id="btnEasy" class="btn-matrix px-4 py-2 rounded font-bold text-lg hover:scale-105 transition-transform">
+                    <div class="text-xl mb-1">🟢 <span id="easyText">FACILE</span></div>
+                    <div id="easyDesc" class="text-xs">Meno agenti, muri strategici</div>
+                </button>
+                <button id="btnNormal" class="btn-matrix px-4 py-2 rounded font-bold text-lg hover:scale-105 transition-transform">
+                    <div class="text-xl mb-1">🟡 <span id="normalText">NORMALE</span></div>
+                    <div id="normalDesc" class="text-xs">Equilibrio tra agenti e muri</div>
+                </button>
+                <button id="btnHard" class="btn-matrix px-4 py-2 rounded font-bold text-lg hover:scale-105 transition-transform">
+                    <div class="text-xl mb-1">🔴 <span id="hardText">DIFFICILE</span></div>
+                    <div id="hardDesc" class="text-xs">Più agenti, meno muri</div>
+                </button>
+            </div>
+
+            <p id="sizeLabel" class="text-sm text-green-400 mb-2 font-bold">DIMENSIONE BOARD</p>
+            <div class="flex gap-2">
+                <button id="btnSize10" class="btn-matrix px-3 py-2 rounded font-bold text-sm flex-1 hover:scale-105 transition-transform">
+                    <div class="text-lg mb-1">A</div>
+                    <div class="text-xs">10x10</div>
+                </button>
+                <button id="btnSize12" class="btn-matrix px-3 py-2 rounded font-bold text-sm flex-1 hover:scale-105 transition-transform border-green-300">
+                    <div class="text-lg mb-1">B</div>
+                    <div class="text-xs">12x12</div>
+                </button>
+                <button id="btnSize14" class="btn-matrix px-3 py-2 rounded font-bold text-sm flex-1 hover:scale-105 transition-transform">
+                    <div class="text-lg mb-1">C</div>
+                    <div class="text-xs">14x14</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            it: {
+                subtitle: "Scappa dagli Agenti e trova il Telefono!",
+                labelLevel: "Livello",
+                labelMoves: "Mosse",
+                labelTimer: "Timer",
+                labelControls: "CONTROLLI",
+                controlKeys: "🎮 WASD / Frecce",
+                controlZoom: "🖱️ Rotella: Zoom",
+                controlRotate: "🖱️ Tasto centrale: Ruota",
+                btnRestart: "RIAVVIA LIVELLO",
+                btnNewGame: "NUOVA PARTITA",
+                legendAgents: "🟣 Agenti",
+                legendPhone: "🟢 Telefono",
+                legendWalls: "⬛ Muri",
+                legendRedPill: "🔴 Pillola Rossa (elimina bot)",
+                legendBluePill: "💙 Pillola Blu (allontana uscita)",
+                difficultyTitle: "SCEGLI DIFFICOLTÀ E DIMENSIONE",
+                difficultyLabel: "DIFFICOLTÀ",
+                easyText: "FACILE",
+                easyDesc: "Meno agenti, muri strategici",
+                normalText: "NORMALE",
+                normalDesc: "Equilibrio tra agenti e muri",
+                hardText: "DIFFICILE",
+                hardDesc: "Più agenti, meno muri",
+                sizeLabel: "DIMENSIONE BOARD",
+                winTitle: "FUGA RIUSCITA!",
+                winMessage: (level, moves, timer) => `Hai completato il livello ${level} in ${moves} mosse e ${timer} secondi!`,
+                winButton: "LIVELLO SUCCESSIVO",
+                loseTitle: "CATTURATO!",
+                loseMessage: "Gli Agenti ti hanno trovato. La Matrix ti ha ripreso...",
+                loseButton: "RIPROVA"
+            },
+            en: {
+                subtitle: "Escape from Agents and find the Phone!",
+                labelLevel: "Level",
+                labelMoves: "Moves",
+                labelTimer: "Timer",
+                labelControls: "CONTROLS",
+                controlKeys: "🎮 WASD / Arrows",
+                controlZoom: "🖱️ Wheel: Zoom",
+                controlRotate: "🖱️ Middle button: Rotate",
+                btnRestart: "RESTART LEVEL",
+                btnNewGame: "NEW GAME",
+                legendAgents: "🟣 Agents",
+                legendPhone: "🟢 Phone",
+                legendWalls: "⬛ Walls",
+                legendRedPill: "🔴 Red Pill (eliminate bot)",
+                legendBluePill: "💙 Blue Pill (move exit away)",
+                difficultyTitle: "CHOOSE DIFFICULTY AND SIZE",
+                difficultyLabel: "DIFFICULTY",
+                easyText: "EASY",
+                easyDesc: "Fewer agents, strategic walls",
+                normalText: "NORMAL",
+                normalDesc: "Balance between agents and walls",
+                hardText: "HARD",
+                hardDesc: "More agents, fewer walls",
+                sizeLabel: "BOARD SIZE",
+                winTitle: "ESCAPE SUCCESSFUL!",
+                winMessage: (level, moves, timer) => `You completed level ${level} in ${moves} moves and ${timer} seconds!`,
+                winButton: "NEXT LEVEL",
+                loseTitle: "CAPTURED!",
+                loseMessage: "The Agents found you. The Matrix has you back...",
+                loseButton: "TRY AGAIN"
+            },
+            es: {
+                subtitle: "¡Escapa de los Agentes y encuentra el Teléfono!",
+                labelLevel: "Nivel",
+                labelMoves: "Movimientos",
+                labelTimer: "Tiempo",
+                labelControls: "CONTROLES",
+                controlKeys: "🎮 WASD / Flechas",
+                controlZoom: "🖱️ Rueda: Zoom",
+                controlRotate: "🖱️ Botón central: Girar",
+                btnRestart: "REINICIAR NIVEL",
+                btnNewGame: "NUEVO JUEGO",
+                legendAgents: "🟣 Agentes",
+                legendPhone: "🟢 Teléfono",
+                legendWalls: "⬛ Muros",
+                legendRedPill: "🔴 Píldora Roja (elimina bot)",
+                legendBluePill: "💙 Píldora Azul (aleja salida)",
+                difficultyTitle: "ELIGE DIFICULTAD Y TAMAÑO",
+                difficultyLabel: "DIFICULTAD",
+                easyText: "FÁCIL",
+                easyDesc: "Menos agentes, muros estratégicos",
+                normalText: "NORMAL",
+                normalDesc: "Equilibrio entre agentes y muros",
+                hardText: "DIFÍCIL",
+                hardDesc: "Más agentes, menos muros",
+                sizeLabel: "TAMAÑO DEL TABLERO",
+                winTitle: "¡ESCAPE EXITOSO!",
+                winMessage: (level, moves, timer) => `¡Completaste el nivel ${level} en ${moves} movimientos y ${timer} segundos!`,
+                winButton: "SIGUIENTE NIVEL",
+                loseTitle: "¡CAPTURADO!",
+                loseMessage: "Los Agentes te encontraron. La Matrix te ha recuperado...",
+                loseButton: "INTENTAR DE NUEVO"
+            },
+            fa: {
+                subtitle: "از دست مأموران فرار کنید و تلفن را پیدا کنید!",
+                labelLevel: "سطح",
+                labelMoves: "حرکات",
+                labelTimer: "زمان",
+                labelControls: "کنترل‌ها",
+                controlKeys: "🎮 WASD / فلش‌ها",
+                controlZoom: "🖱️ چرخ: زوم",
+                controlRotate: "🖱️ دکمه وسط: چرخش",
+                btnRestart: "شروع مجدد سطح",
+                btnNewGame: "بازی جدید",
+                legendAgents: "🟣 مأموران",
+                legendPhone: "🟢 تلفن",
+                legendWalls: "⬛ دیوارها",
+                legendRedPill: "🔴 قرص قرمز (حذف ربات)",
+                legendBluePill: "💙 قرص آبی (دور کردن خروجی)",
+                difficultyTitle: "انتخاب سختی و اندازه",
+                difficultyLabel: "سختی",
+                easyText: "آسان",
+                easyDesc: "مأموران کمتر، دیوارهای استراتژیک",
+                normalText: "متوسط",
+                normalDesc: "تعادل بین مأموران و دیوارها",
+                hardText: "سخت",
+                hardDesc: "مأموران بیشتر، دیوارهای کمتر",
+                sizeLabel: "اندازه صفحه",
+                winTitle: "فرار موفقیت‌آمیز!",
+                winMessage: (level, moves, timer) => `شما سطح ${level} را در ${moves} حرکت و ${timer} ثانیه تکمیل کردید!`,
+                winButton: "سطح بعدی",
+                loseTitle: "دستگیر شدید!",
+                loseMessage: "مأموران شما را پیدا کردند. ماتریکس شما را دوباره گرفت...",
+                loseButton: "دوباره تلاش کنید"
+            },
+            fr: {
+                subtitle: "Échappez aux Agents et trouvez le Téléphone!",
+                labelLevel: "Niveau",
+                labelMoves: "Mouvements",
+                labelTimer: "Temps",
+                labelControls: "CONTRÔLES",
+                controlKeys: "🎮 WASD / Flèches",
+                controlZoom: "🖱️ Molette: Zoom",
+                controlRotate: "🖱️ Bouton central: Tourner",
+                btnRestart: "RECOMMENCER NIVEAU",
+                btnNewGame: "NOUVELLE PARTIE",
+                legendAgents: "🟣 Agents",
+                legendPhone: "🟢 Téléphone",
+                legendWalls: "⬛ Murs",
+                legendRedPill: "🔴 Pilule Rouge (élimine bot)",
+                legendBluePill: "💙 Pilule Bleue (éloigne sortie)",
+                difficultyTitle: "CHOISIR DIFFICULTÉ ET TAILLE",
+                difficultyLabel: "DIFFICULTÉ",
+                easyText: "FACILE",
+                easyDesc: "Moins d'agents, murs stratégiques",
+                normalText: "NORMAL",
+                normalDesc: "Équilibre entre agents et murs",
+                hardText: "DIFFICILE",
+                hardDesc: "Plus d'agents, moins de murs",
+                sizeLabel: "TAILLE DU PLATEAU",
+                winTitle: "ÉVASION RÉUSSIE!",
+                winMessage: (level, moves, timer) => `Vous avez terminé le niveau ${level} en ${moves} mouvements et ${timer} secondes!`,
+                winButton: "NIVEAU SUIVANT",
+                loseTitle: "CAPTURÉ!",
+                loseMessage: "Les Agents vous ont trouvé. La Matrice vous a récupéré...",
+                loseButton: "RÉESSAYER"
+            },
+            de: {
+                subtitle: "Entkomme den Agenten und finde das Telefon!",
+                labelLevel: "Level",
+                labelMoves: "Züge",
+                labelTimer: "Zeit",
+                labelControls: "STEUERUNG",
+                controlKeys: "🎮 WASD / Pfeile",
+                controlZoom: "🖱️ Mausrad: Zoom",
+                controlRotate: "🖱️ Mittlere Taste: Drehen",
+                btnRestart: "LEVEL NEU STARTEN",
+                btnNewGame: "NEUES SPIEL",
+                legendAgents: "🟣 Agenten",
+                legendPhone: "🟢 Telefon",
+                legendWalls: "⬛ Mauern",
+                legendRedPill: "🔴 Rote Pille (Bot eliminieren)",
+                legendBluePill: "💙 Blaue Pille (Ausgang entfernen)",
+                difficultyTitle: "SCHWIERIGKEIT UND GRÖSSE WÄHLEN",
+                difficultyLabel: "SCHWIERIGKEIT",
+                easyText: "EINFACH",
+                easyDesc: "Weniger Agenten, strategische Mauern",
+                normalText: "NORMAL",
+                normalDesc: "Balance zwischen Agenten und Mauern",
+                hardText: "SCHWER",
+                hardDesc: "Mehr Agenten, weniger Mauern",
+                sizeLabel: "BRETTGRÖSSE",
+                winTitle: "FLUCHT ERFOLGREICH!",
+                winMessage: (level, moves, timer) => `Du hast Level ${level} in ${moves} Zügen und ${timer} Sekunden abgeschlossen!`,
+                winButton: "NÄCHSTES LEVEL",
+                loseTitle: "GEFANGEN!",
+                loseMessage: "Die Agenten haben dich gefunden. Die Matrix hat dich zurück...",
+                loseButton: "NOCHMAL VERSUCHEN"
+            },
+            pt: {
+                subtitle: "Escape dos Agentes e encontre o Telefone!",
+                labelLevel: "Nível",
+                labelMoves: "Movimentos",
+                labelTimer: "Tempo",
+                labelControls: "CONTROLES",
+                controlKeys: "🎮 WASD / Setas",
+                controlZoom: "🖱️ Roda: Zoom",
+                controlRotate: "🖱️ Botão central: Girar",
+                btnRestart: "REINICIAR NÍVEL",
+                btnNewGame: "NOVO JOGO",
+                legendAgents: "🟣 Agentes",
+                legendPhone: "🟢 Telefone",
+                legendWalls: "⬛ Paredes",
+                legendRedPill: "🔴 Pílula Vermelha (elimina bot)",
+                legendBluePill: "💙 Pílula Azul (afasta saída)",
+                difficultyTitle: "ESCOLHER DIFICULDADE E TAMANHO",
+                difficultyLabel: "DIFICULDADE",
+                easyText: "FÁCIL",
+                easyDesc: "Menos agentes, paredes estratégicas",
+                normalText: "NORMAL",
+                normalDesc: "Equilíbrio entre agentes e paredes",
+                hardText: "DIFÍCIL",
+                hardDesc: "Mais agentes, menos paredes",
+                sizeLabel: "TAMANHO DO TABULEIRO",
+                winTitle: "FUGA BEM-SUCEDIDA!",
+                winMessage: (level, moves, timer) => `Você completou o nível ${level} em ${moves} movimentos e ${timer} segundos!`,
+                winButton: "PRÓXIMO NÍVEL",
+                loseTitle: "CAPTURADO!",
+                loseMessage: "Os Agentes encontraram você. A Matrix te pegou de volta...",
+                loseButton: "TENTAR NOVAMENTE"
+            },
+            ru: {
+                subtitle: "Убегите от Агентов и найдите Телефон!",
+                labelLevel: "Уровень",
+                labelMoves: "Ходы",
+                labelTimer: "Время",
+                labelControls: "УПРАВЛЕНИЕ",
+                controlKeys: "🎮 WASD / Стрелки",
+                controlZoom: "🖱️ Колесо: Зум",
+                controlRotate: "🖱️ Средняя кнопка: Повернуть",
+                btnRestart: "ПЕРЕЗАПУСТИТЬ УРОВЕНЬ",
+                btnNewGame: "НОВАЯ ИГРА",
+                legendAgents: "🟣 Агенты",
+                legendPhone: "🟢 Телефон",
+                legendWalls: "⬛ Стены",
+                legendRedPill: "🔴 Красная Таблетка (убрать бота)",
+                legendBluePill: "💙 Синяя Таблетка (отдалить выход)",
+                difficultyTitle: "ВЫБЕРИТЕ СЛОЖНОСТЬ И РАЗМЕР",
+                difficultyLabel: "СЛОЖНОСТЬ",
+                easyText: "ЛЕГКО",
+                easyDesc: "Меньше агентов, стратегические стены",
+                normalText: "НОРМАЛЬНО",
+                normalDesc: "Баланс между агентами и стенами",
+                hardText: "СЛОЖНО",
+                hardDesc: "Больше агентов, меньше стен",
+                sizeLabel: "РАЗМЕР ДОСКИ",
+                winTitle: "ПОБЕГ УСПЕШЕН!",
+                winMessage: (level, moves, timer) => `Вы прошли уровень ${level} за ${moves} ходов и ${timer} секунд!`,
+                winButton: "СЛЕДУЮЩИЙ УРОВЕНЬ",
+                loseTitle: "ПОЙМАН!",
+                loseMessage: "Агенты нашли вас. Матрица вернула вас...",
+                loseButton: "ПОПРОБОВАТЬ СНОВА"
+            },
+            zh: {
+                subtitle: "逃离特工并找到电话！",
+                labelLevel: "关卡",
+                labelMoves: "移动",
+                labelTimer: "时间",
+                labelControls: "控制",
+                controlKeys: "🎮 WASD / 方向键",
+                controlZoom: "🖱️ 滚轮：缩放",
+                controlRotate: "🖱️ 中键：旋转",
+                btnRestart: "重新开始关卡",
+                btnNewGame: "新游戏",
+                legendAgents: "🟣 特工",
+                legendPhone: "🟢 电话",
+                legendWalls: "⬛ 墙壁",
+                legendRedPill: "🔴 红色药丸（消除机器人）",
+                legendBluePill: "💙 蓝色药丸（移动出口）",
+                difficultyTitle: "选择难度和大小",
+                difficultyLabel: "难度",
+                easyText: "简单",
+                easyDesc: "较少特工，战略墙壁",
+                normalText: "普通",
+                normalDesc: "特工和墙壁之间的平衡",
+                hardText: "困难",
+                hardDesc: "更多特工，更少墙壁",
+                sizeLabel: "棋盘大小",
+                winTitle: "成功逃脱！",
+                winMessage: (level, moves, timer) => `你在${moves}步和${timer}秒内完成了第${level}关！`,
+                winButton: "下一关",
+                loseTitle: "被抓住了！",
+                loseMessage: "特工找到了你。矩阵把你带回来了...",
+                loseButton: "再试一次"
+            },
+            ja: {
+                subtitle: "エージェントから逃げて電話を見つけろ！",
+                labelLevel: "レベル",
+                labelMoves: "移動",
+                labelTimer: "時間",
+                labelControls: "操作",
+                controlKeys: "🎮 WASD / 矢印キー",
+                controlZoom: "🖱️ ホイール：ズーム",
+                controlRotate: "🖱️ 中ボタン：回転",
+                btnRestart: "レベル再開",
+                btnNewGame: "新しいゲーム",
+                legendAgents: "🟣 エージェント",
+                legendPhone: "🟢 電話",
+                legendWalls: "⬛ 壁",
+                legendRedPill: "🔴 赤い薬（ボット削除）",
+                legendBluePill: "💙 青い薬（出口を遠ざける）",
+                difficultyTitle: "難易度とサイズを選択",
+                difficultyLabel: "難易度",
+                easyText: "簡単",
+                easyDesc: "エージェント少なめ、戦略的な壁",
+                normalText: "普通",
+                normalDesc: "エージェントと壁のバランス",
+                hardText: "難しい",
+                hardDesc: "エージェント多め、壁少なめ",
+                sizeLabel: "ボードサイズ",
+                winTitle: "脱出成功！",
+                winMessage: (level, moves, timer) => `レベル${level}を${moves}手${timer}秒でクリア！`,
+                winButton: "次のレベル",
+                loseTitle: "捕まった！",
+                loseMessage: "エージェントに見つかった。マトリックスがあなたを取り戻した...",
+                loseButton: "もう一度"
+            },
+            ar: {
+                subtitle: "اهرب من العملاء وابحث عن الهاتف!",
+                labelLevel: "المستوى",
+                labelMoves: "الحركات",
+                labelTimer: "الوقت",
+                labelControls: "التحكم",
+                controlKeys: "🎮 WASD / الأسهم",
+                controlZoom: "🖱️ العجلة: تكبير",
+                controlRotate: "🖱️ الزر الأوسط: دوران",
+                btnRestart: "إعادة تشغيل المستوى",
+                btnNewGame: "لعبة جديدة",
+                legendAgents: "🟣 العملاء",
+                legendPhone: "🟢 الهاتف",
+                legendWalls: "⬛ الجدران",
+                legendRedPill: "🔴 حبة حمراء (إزالة بوت)",
+                legendBluePill: "💙 حبة زرقاء (إبعاد المخرج)",
+                difficultyTitle: "اختر الصعوبة والحجم",
+                difficultyLabel: "الصعوبة",
+                easyText: "سهل",
+                easyDesc: "عملاء أقل، جدران استراتيجية",
+                normalText: "عادي",
+                normalDesc: "توازن بين العملاء والجدران",
+                hardText: "صعب",
+                hardDesc: "عملاء أكثر، جدران أقل",
+                sizeLabel: "حجم اللوحة",
+                winTitle: "هروب ناجح!",
+                winMessage: (level, moves, timer) => `أكملت المستوى ${level} في ${moves} حركة و ${timer} ثانية!`,
+                winButton: "المستوى التالي",
+                loseTitle: "تم القبض عليك!",
+                loseMessage: "العملاء وجدوك. ماتريكس استعادك...",
+                loseButton: "حاول مرة أخرى"
+            }
+        };
+
+        // Game Constants
+        const CELL_SIZE = 2;
+        const CELL_TYPES = {
+            EMPTY: 0,
+            WALL: 1,
+            PLAYER: 2,
+            AGENT: 3,
+            PHONE: 4,
+            RED_PILL: 5,
+            BLUE_PILL: 6
+        };
+
+        // Game State
+        let gameState = {
+            grid: [],
+            player: { x: 0, y: 0 },
+            agents: [],
+            phone: { x: 0, y: 0 },
+            level: 1,
+            moves: 0,
+            timer: 0,
+            timerInterval: null,
+            gameOver: false,
+            won: false,
+            difficulty: 'normal',
+            gridSize: 12,
+            language: 'en'
+        };
+
+        // Three.js variables
+        let scene, camera, renderer;
+        let playerMesh, phoneMesh, agentMeshes = [], wallMeshes = [];
+        let redPillMeshes = [], bluePillMeshes = [];
+        let floorMesh, gridHelper, northIndicator;
+
+        // Camera controls
+        let cameraControls = {
+            isRotating: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            rotationX: 0,
+            rotationY: 0,
+            distance: 12 * CELL_SIZE * 1.2,
+            targetX: 12 * CELL_SIZE / 2,
+            targetY: 0,
+            targetZ: 12 * CELL_SIZE / 2
+        };
+
+        // Audio Context for sound effects
+        let audioContext = null;
+
+        // Cheat code tracking
+        const pressedKeys = new Set();
+
+        // Function to apply translations
+        function applyLanguage(lang) {
+            gameState.language = lang;
+            const t = translations[lang];
+            
+            document.getElementById('subtitle').textContent = t.subtitle;
+            document.getElementById('labelLevel').textContent = t.labelLevel;
+            document.getElementById('labelMoves').textContent = t.labelMoves;
+            document.getElementById('labelTimer').textContent = t.labelTimer;
+            document.getElementById('labelControls').textContent = t.labelControls;
+            document.getElementById('controlKeys').textContent = t.controlKeys;
+            document.getElementById('controlZoom').textContent = t.controlZoom;
+            document.getElementById('controlRotate').textContent = t.controlRotate;
+            document.getElementById('btnRestart').textContent = t.btnRestart;
+            document.getElementById('btnNewGame').textContent = t.btnNewGame;
+            document.getElementById('legendAgents').textContent = t.legendAgents;
+            document.getElementById('legendPhone').textContent = t.legendPhone;
+            document.getElementById('legendWalls').textContent = t.legendWalls;
+            document.getElementById('legendRedPill').textContent = t.legendRedPill;
+            document.getElementById('legendBluePill').textContent = t.legendBluePill;
+            document.getElementById('difficultyTitle').textContent = t.difficultyTitle;
+            document.getElementById('difficultyLabel').textContent = t.difficultyLabel;
+            document.getElementById('easyText').textContent = t.easyText;
+            document.getElementById('easyDesc').textContent = t.easyDesc;
+            document.getElementById('normalText').textContent = t.normalText;
+            document.getElementById('normalDesc').textContent = t.normalDesc;
+            document.getElementById('hardText').textContent = t.hardText;
+            document.getElementById('hardDesc').textContent = t.hardDesc;
+            document.getElementById('sizeLabel').textContent = t.sizeLabel;
+        }
+
+        // Initialize audio context
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Sound Effects Functions
+        function playMoveSound() {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 400;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playRedPillSound() {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'square';
+            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.2);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playBluePillSound() {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = 'sawtooth';
+            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.15);
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioContext.currentTime + 0.3);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.4);
+        }
+
+        function playWinSound() {
+            if (!audioContext) return;
+            const notes = [523.25, 659.25, 783.99, 1046.50];
+            notes.forEach((freq, index) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = freq;
+                oscillator.type = 'sine';
+                const startTime = audioContext.currentTime + index * 0.15;
+                gainNode.gain.setValueAtTime(0.12, startTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
+                oscillator.start(startTime);
+                oscillator.stop(startTime + 0.5);
+            });
+        }
+
+        function playLoseSound() {
+            if (!audioContext) return;
+            const oscillator1 = audioContext.createOscillator();
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator1.connect(gainNode);
+            oscillator2.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator1.type = 'sawtooth';
+            oscillator2.type = 'square';
+            gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
+            for (let i = 0; i < 6; i++) {
+                const time = audioContext.currentTime + i * 0.1;
+                const freq = i % 2 === 0 ? 220 : 185;
+                oscillator1.frequency.setValueAtTime(freq, time);
+                oscillator2.frequency.setValueAtTime(freq * 1.5, time);
+            }
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.7);
+            oscillator1.start(audioContext.currentTime);
+            oscillator2.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.7);
+            oscillator2.stop(audioContext.currentTime + 0.7);
+        }
+
+        function playHoverSound() {
+            if (!audioContext) {
+                initAudio();
+            }
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 600;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.05);
+        }
+
+        function updateSceneForGridSize() {
+            const GRID_SIZE = gameState.gridSize;
+            if (floorMesh) scene.remove(floorMesh);
+            if (gridHelper) scene.remove(gridHelper);
+            if (northIndicator) scene.remove(northIndicator);
+            const floorGeometry = new THREE.PlaneGeometry(GRID_SIZE * CELL_SIZE + 4, GRID_SIZE * CELL_SIZE + 4);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x001100,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set(GRID_SIZE * CELL_SIZE / 2, -0.1, GRID_SIZE * CELL_SIZE / 2);
+            floorMesh.receiveShadow = true;
+            scene.add(floorMesh);
+            gridHelper = new THREE.GridHelper(GRID_SIZE * CELL_SIZE, GRID_SIZE, 0x003300, 0x002200);
+            gridHelper.position.set(GRID_SIZE * CELL_SIZE / 2, 0, GRID_SIZE * CELL_SIZE / 2);
+            scene.add(gridHelper);
+            createNorthIndicator();
+            cameraControls.distance = GRID_SIZE * CELL_SIZE * 1.2;
+            cameraControls.targetX = GRID_SIZE * CELL_SIZE / 2;
+            cameraControls.targetY = 0;
+            cameraControls.targetZ = GRID_SIZE * CELL_SIZE / 2;
+            updateCamera();
+        }
+
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 20, 50);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(12 * CELL_SIZE / 2, 12 * CELL_SIZE * 0.8, 12 * CELL_SIZE);
+            camera.lookAt(12 * CELL_SIZE / 2, 0, 12 * CELL_SIZE / 2);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+            const ambientLight = new THREE.AmbientLight(0x001100, 0.3);
+            scene.add(ambientLight);
+            const greenLight = new THREE.DirectionalLight(0x00ff00, 0.8);
+            greenLight.position.set(10, 20, 10);
+            greenLight.castShadow = true;
+            greenLight.shadow.mapSize.width = 2048;
+            greenLight.shadow.mapSize.height = 2048;
+            greenLight.shadow.camera.near = 0.5;
+            greenLight.shadow.camera.far = 100;
+            greenLight.shadow.camera.left = -30;
+            greenLight.shadow.camera.right = 30;
+            greenLight.shadow.camera.top = 30;
+            greenLight.shadow.camera.bottom = -30;
+            scene.add(greenLight);
+            const pointLight = new THREE.PointLight(0x00ff00, 0.5, 50);
+            pointLight.position.set(12, 10, 12);
+            scene.add(pointLight);
+            const floorGeometry = new THREE.PlaneGeometry(12 * CELL_SIZE + 4, 12 * CELL_SIZE + 4);
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x001100,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            floorMesh = new THREE.Mesh(floorGeometry, floorMaterial);
+            floorMesh.rotation.x = -Math.PI / 2;
+            floorMesh.position.set(12 * CELL_SIZE / 2, -0.1, 12 * CELL_SIZE / 2);
+            floorMesh.receiveShadow = true;
+            scene.add(floorMesh);
+            gridHelper = new THREE.GridHelper(12 * CELL_SIZE, 12, 0x003300, 0x002200);
+            gridHelper.position.set(12 * CELL_SIZE / 2, 0, 12 * CELL_SIZE / 2);
+            scene.add(gridHelper);
+            createNorthIndicator();
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function createNorthIndicator() {
+            const GRID_SIZE = gameState.gridSize;
+            northIndicator = new THREE.Group();
+            const shaftGeometry = new THREE.CylinderGeometry(0.15, 0.15, 3, 8);
+            const shaftMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.5,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
+            shaft.rotation.x = Math.PI / 2;
+            shaft.position.z = -1.5;
+            northIndicator.add(shaft);
+            const headGeometry = new THREE.ConeGeometry(0.5, 1.5, 8);
+            const headMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.6,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.rotation.x = Math.PI / 2;
+            head.rotation.y = Math.PI;
+            head.position.z = -3.5;
+            northIndicator.add(head);
+            const letterMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.7,
+                metalness: 0.9,
+                roughness: 0.1
+            });
+            const leftBar = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.5, 0.2), letterMaterial);
+            leftBar.position.set(-0.5, 2, -4.5);
+            leftBar.rotation.y = Math.PI;
+            northIndicator.add(leftBar);
+            const rightBar = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.5, 0.2), letterMaterial);
+            rightBar.position.set(0.5, 2, -4.5);
+            rightBar.rotation.y = Math.PI;
+            northIndicator.add(rightBar);
+            const diagonal = new THREE.Mesh(new THREE.BoxGeometry(0.25, 1.8, 0.2), letterMaterial);
+            diagonal.position.set(0, 2, -4.5);
+            diagonal.rotation.y = Math.PI;
+            diagonal.rotation.z = -Math.PI / 4.5;
+            northIndicator.add(diagonal);
+            northIndicator.position.set(GRID_SIZE * CELL_SIZE / 2, 0, -2);
+            const glowLight = new THREE.PointLight(0xffff00, 1, 10);
+            glowLight.position.set(0, 1, -2);
+            northIndicator.add(glowLight);
+            scene.add(northIndicator);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function createPlayerMesh() {
+            const geometry = new THREE.BoxGeometry(CELL_SIZE * 0.7, CELL_SIZE * 0.7, CELL_SIZE * 0.7);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xffffff,
+                emissive: 0xffffff,
+                emissiveIntensity: 0.6,
+                roughness: 0.1,
+                metalness: 0.7
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function createAgentMesh() {
+            const geometry = new THREE.BoxGeometry(CELL_SIZE * 0.7, CELL_SIZE * 0.7, CELL_SIZE * 0.7);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x9400d3,
+                emissive: 0x9400d3,
+                emissiveIntensity: 0.5,
+                roughness: 0.3,
+                metalness: 0.8
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function createPhoneMesh() {
+            const geometry = new THREE.CylinderGeometry(CELL_SIZE * 0.4, CELL_SIZE * 0.4, CELL_SIZE * 0.8, 8);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x00ff88,
+                emissive: 0x00ff88,
+                emissiveIntensity: 0.6,
+                roughness: 0.2,
+                metalness: 0.9
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function createWallMesh() {
+            const geometry = new THREE.BoxGeometry(CELL_SIZE * 0.9, CELL_SIZE * 1.5, CELL_SIZE * 0.9);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x003300,
+                emissive: 0x001100,
+                emissiveIntensity: 0.2,
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function createRedPillMesh() {
+            const geometry = new THREE.SphereGeometry(CELL_SIZE * 0.4, 16, 16);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.8,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function createBluePillMesh() {
+            const geometry = new THREE.SphereGeometry(CELL_SIZE * 0.4, 16, 16);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x0088ff,
+                emissive: 0x0044ff,
+                emissiveIntensity: 0.8,
+                roughness: 0.1,
+                metalness: 0.9
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        }
+
+        function gridToWorld(x, y) {
+            return {
+                x: x * CELL_SIZE + CELL_SIZE / 2,
+                z: y * CELL_SIZE + CELL_SIZE / 2,
+                y: CELL_SIZE * 0.35
+            };
+        }
+
+        function render3DScene() {
+            const GRID_SIZE = gameState.gridSize;
+            if (playerMesh) scene.remove(playerMesh);
+            if (phoneMesh) scene.remove(phoneMesh);
+            agentMeshes.forEach(mesh => scene.remove(mesh));
+            wallMeshes.forEach(mesh => scene.remove(mesh));
+            redPillMeshes.forEach(mesh => scene.remove(mesh));
+            bluePillMeshes.forEach(mesh => scene.remove(mesh));
+            agentMeshes = [];
+            wallMeshes = [];
+            redPillMeshes = [];
+            bluePillMeshes = [];
+            playerMesh = createPlayerMesh();
+            const playerPos = gridToWorld(gameState.player.x, gameState.player.y);
+            playerMesh.position.set(playerPos.x, playerPos.y, playerPos.z);
+            scene.add(playerMesh);
+            phoneMesh = createPhoneMesh();
+            const phonePos = gridToWorld(gameState.phone.x, gameState.phone.y);
+            phoneMesh.position.set(phonePos.x, phonePos.y, phonePos.z);
+            scene.add(phoneMesh);
+            for (let agent of gameState.agents) {
+                const agentMesh = createAgentMesh();
+                const agentPos = gridToWorld(agent.x, agent.y);
+                agentMesh.position.set(agentPos.x, agentPos.y, agentPos.z);
+                scene.add(agentMesh);
+                agentMeshes.push(agentMesh);
+            }
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (gameState.grid[y][x] === CELL_TYPES.WALL) {
+                        const wallMesh = createWallMesh();
+                        const wallPos = gridToWorld(x, y);
+                        wallMesh.position.set(wallPos.x, CELL_SIZE * 0.75, wallPos.z);
+                        scene.add(wallMesh);
+                        wallMeshes.push(wallMesh);
+                    } else if (gameState.grid[y][x] === CELL_TYPES.RED_PILL) {
+                        const pillMesh = createRedPillMesh();
+                        const pillPos = gridToWorld(x, y);
+                        pillMesh.position.set(pillPos.x, pillPos.y, pillPos.z);
+                        scene.add(pillMesh);
+                        redPillMeshes.push(pillMesh);
+                    } else if (gameState.grid[y][x] === CELL_TYPES.BLUE_PILL) {
+                        const pillMesh = createBluePillMesh();
+                        const pillPos = gridToWorld(x, y);
+                        pillMesh.position.set(pillPos.x, pillPos.y, pillPos.z);
+                        scene.add(pillMesh);
+                        bluePillMeshes.push(pillMesh);
+                    }
+                }
+            }
+        }
+
+        function updateCamera() {
+            const phi = cameraControls.rotationY;
+            const theta = cameraControls.rotationX;
+            camera.position.x = cameraControls.targetX + cameraControls.distance * Math.sin(phi) * Math.cos(theta);
+            camera.position.y = cameraControls.targetY + cameraControls.distance * Math.sin(theta);
+            camera.position.z = cameraControls.targetZ + cameraControls.distance * Math.cos(phi) * Math.cos(theta);
+            camera.lookAt(cameraControls.targetX, cameraControls.targetY, cameraControls.targetZ);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (playerMesh) {
+                playerMesh.rotation.y += 0.02;
+            }
+            if (phoneMesh) {
+                phoneMesh.rotation.y += 0.03;
+                phoneMesh.position.y = gridToWorld(0, 0).y + Math.sin(Date.now() * 0.002) * 0.2;
+            }
+            agentMeshes.forEach((mesh, i) => {
+                mesh.rotation.y += 0.025;
+                mesh.rotation.x = Math.sin(Date.now() * 0.003 + i) * 0.1;
+            });
+            redPillMeshes.forEach((mesh, i) => {
+                mesh.rotation.y += 0.04;
+                mesh.rotation.x += 0.02;
+                mesh.position.y = gridToWorld(0, 0).y + Math.sin(Date.now() * 0.003 + i * 0.5) * 0.15;
+            });
+            bluePillMeshes.forEach((mesh, i) => {
+                mesh.rotation.y -= 0.04;
+                mesh.rotation.x -= 0.02;
+                mesh.position.y = gridToWorld(0, 0).y + Math.cos(Date.now() * 0.003 + i * 0.5) * 0.15;
+            });
+            if (northIndicator) {
+                const pulse = Math.sin(Date.now() * 0.002) * 0.3 + 0.7;
+                northIndicator.children.forEach(child => {
+                    if (child.material && child.material.emissiveIntensity !== undefined) {
+                        child.material.emissiveIntensity = pulse;
+                    }
+                });
+            }
+            renderer.render(scene, camera);
+        }
+
+        function initGame() {
+            clearInterval(gameState.timerInterval);
+            gameState.grid = createEmptyGrid();
+            gameState.moves = 0;
+            gameState.timer = 0;
+            gameState.gameOver = false;
+            gameState.won = false;
+            cameraControls.rotationY = 0;
+            cameraControls.rotationX = Math.PI / 3.5;
+            updateCamera();
+            generateLevel();
+            updateStats();
+            render3DScene();
+            gameState.timerInterval = setInterval(() => {
+                if (!gameState.gameOver) {
+                    gameState.timer++;
+                    updateStats();
+                }
+            }, 1000);
+        }
+
+        function createEmptyGrid() {
+            const GRID_SIZE = gameState.gridSize;
+            const grid = [];
+            for (let y = 0; y < GRID_SIZE; y++) {
+                grid[y] = [];
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    grid[y][x] = CELL_TYPES.EMPTY;
+                }
+            }
+            return grid;
+        }
+
+        function isPathAvailable() {
+            const GRID_SIZE = gameState.gridSize;
+            const visited = Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(false));
+            const queue = [{ x: gameState.player.x, y: gameState.player.y }];
+            visited[gameState.player.y][gameState.player.x] = true;
+            const directions = [
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -1, dy: 0 },
+                { dx: 1, dy: 0 }
+            ];
+            while (queue.length > 0) {
+                const current = queue.shift();
+                if (current.x === gameState.phone.x && current.y === gameState.phone.y) {
+                    return true;
+                }
+                for (let dir of directions) {
+                    const newX = current.x + dir.dx;
+                    const newY = current.y + dir.dy;
+                    if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE &&
+                        !visited[newY][newX] && gameState.grid[newY][newX] !== CELL_TYPES.WALL) {
+                        visited[newY][newX] = true;
+                        queue.push({ x: newX, y: newY });
+                    }
+                }
+            }
+            return false;
+        }
+
+        function generateLevel() {
+            const GRID_SIZE = gameState.gridSize;
+            let attempts = 0;
+            const maxAttempts = 100;
+            do {
+                gameState.grid = createEmptyGrid();
+                gameState.player = { x: 1, y: 1 };
+                gameState.grid[1][1] = CELL_TYPES.PLAYER;
+                gameState.phone = { 
+                    x: GRID_SIZE - 2, 
+                    y: GRID_SIZE - 2 
+                };
+                gameState.grid[gameState.phone.y][gameState.phone.x] = CELL_TYPES.PHONE;
+                let numWalls, numAgents;
+                const gridArea = GRID_SIZE * GRID_SIZE;
+                const wallDensity = gameState.difficulty === 'easy' ? 0.08 : 
+                                   gameState.difficulty === 'normal' ? 0.12 : 0.06;
+                if (gameState.difficulty === 'easy') {
+                    numWalls = Math.floor(gridArea * wallDensity) + gameState.level * 2;
+                    numAgents = Math.min(1 + Math.floor(gameState.level / 3), 3);
+                    for (let i = 0; i < numWalls; i++) {
+                        let x, y;
+                        if (Math.random() < 0.6) {
+                            const edge = Math.floor(Math.random() * 4);
+                            if (edge === 0) {
+                                x = Math.floor(Math.random() * GRID_SIZE);
+                                y = Math.floor(Math.random() * 3);
+                            } else if (edge === 1) {
+                                x = Math.floor(Math.random() * GRID_SIZE);
+                                y = GRID_SIZE - 1 - Math.floor(Math.random() * 3);
+                            } else if (edge === 2) {
+                                x = Math.floor(Math.random() * 3);
+                                y = Math.floor(Math.random() * GRID_SIZE);
+                            } else {
+                                x = GRID_SIZE - 1 - Math.floor(Math.random() * 3);
+                                y = Math.floor(Math.random() * GRID_SIZE);
+                            }
+                        } else {
+                            x = Math.floor(Math.random() * GRID_SIZE);
+                            y = Math.floor(Math.random() * GRID_SIZE);
+                        }
+                        if (gameState.grid[y][x] === CELL_TYPES.EMPTY) {
+                            gameState.grid[y][x] = CELL_TYPES.WALL;
+                        }
+                    }
+                } else if (gameState.difficulty === 'normal') {
+                    numWalls = Math.floor(gridArea * wallDensity) + gameState.level * 3;
+                    numAgents = Math.min(2 + Math.floor(gameState.level / 2), 6);
+                    for (let i = 0; i < numWalls; i++) {
+                        const x = Math.floor(Math.random() * GRID_SIZE);
+                        const y = Math.floor(Math.random() * GRID_SIZE);
+                        if (gameState.grid[y][x] === CELL_TYPES.EMPTY) {
+                            gameState.grid[y][x] = CELL_TYPES.WALL;
+                        }
+                    }
+                } else {
+                    numWalls = Math.floor(gridArea * wallDensity) + Math.floor(gameState.level * 1.5);
+                    numAgents = Math.min(3 + Math.floor(gameState.level / 1.5), 8);
+                    for (let i = 0; i < numWalls; i++) {
+                        const x = Math.floor(Math.random() * GRID_SIZE);
+                        const y = Math.floor(Math.random() * GRID_SIZE);
+                        if (gameState.grid[y][x] === CELL_TYPES.EMPTY) {
+                            gameState.grid[y][x] = CELL_TYPES.WALL;
+                        }
+                    }
+                }
+                gameState.agents = [];
+                for (let i = 0; i < numAgents; i++) {
+                    let x, y;
+                    const minDistance = gameState.difficulty === 'easy' ? 4 : 3;
+                    do {
+                        x = Math.floor(Math.random() * GRID_SIZE);
+                        y = Math.floor(Math.random() * GRID_SIZE);
+                    } while (gameState.grid[y][x] !== CELL_TYPES.EMPTY || 
+                             (Math.abs(x - gameState.player.x) < minDistance && Math.abs(y - gameState.player.y) < minDistance));
+                    gameState.agents.push({ x, y });
+                    gameState.grid[y][x] = CELL_TYPES.AGENT;
+                }
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * GRID_SIZE);
+                    y = Math.floor(Math.random() * GRID_SIZE);
+                } while (gameState.grid[y][x] !== CELL_TYPES.EMPTY);
+                gameState.grid[y][x] = CELL_TYPES.RED_PILL;
+                do {
+                    x = Math.floor(Math.random() * GRID_SIZE);
+                    y = Math.floor(Math.random() * GRID_SIZE);
+                } while (gameState.grid[y][x] !== CELL_TYPES.EMPTY);
+                gameState.grid[y][x] = CELL_TYPES.BLUE_PILL;
+                attempts++;
+            } while (!isPathAvailable() && attempts < maxAttempts);
+            if (attempts >= maxAttempts) {
+                console.warn('Could not generate valid level, using fallback');
+            }
+        }
+
+        function movePlayer(dx, dy) {
+            const GRID_SIZE = gameState.gridSize;
+            if (gameState.gameOver) return;
+            const newX = gameState.player.x + dx;
+            const newY = gameState.player.y + dy;
+            if (newX < 0 || newX >= GRID_SIZE || newY < 0 || newY >= GRID_SIZE) return;
+            if (gameState.grid[newY][newX] === CELL_TYPES.WALL) return;
+            if (newX === gameState.phone.x && newY === gameState.phone.y) {
+                winGame();
+                return;
+            }
+            if (gameState.grid[newY][newX] === CELL_TYPES.AGENT) {
+                loseGame();
+                return;
+            }
+            if (gameState.grid[newY][newX] === CELL_TYPES.RED_PILL) {
+                playRedPillSound();
+                if (gameState.agents.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * gameState.agents.length);
+                    const removedAgent = gameState.agents[randomIndex];
+                    gameState.grid[removedAgent.y][removedAgent.x] = CELL_TYPES.EMPTY;
+                    gameState.agents.splice(randomIndex, 1);
+                }
+            } else if (gameState.grid[newY][newX] === CELL_TYPES.BLUE_PILL) {
+                playBluePillSound();
+                gameState.grid[gameState.phone.y][gameState.phone.x] = CELL_TYPES.EMPTY;
+                let newPhoneX, newPhoneY;
+                let maxAttempts = 50;
+                do {
+                    newPhoneX = Math.floor(Math.random() * GRID_SIZE);
+                    newPhoneY = Math.floor(Math.random() * GRID_SIZE);
+                    maxAttempts--;
+                } while (maxAttempts > 0 && (
+                    gameState.grid[newPhoneY][newPhoneX] !== CELL_TYPES.EMPTY ||
+                    Math.abs(newPhoneX - gameState.player.x) + Math.abs(newPhoneY - gameState.player.y) < 8
+                ));
+                if (maxAttempts > 0) {
+                    gameState.phone.x = newPhoneX;
+                    gameState.phone.y = newPhoneY;
+                    gameState.grid[newPhoneY][newPhoneX] = CELL_TYPES.PHONE;
+                } else {
+                    gameState.grid[gameState.phone.y][gameState.phone.x] = CELL_TYPES.PHONE;
+                }
+            } else {
+                playMoveSound();
+            }
+            gameState.grid[gameState.player.y][gameState.player.x] = CELL_TYPES.EMPTY;
+            gameState.player.x = newX;
+            gameState.player.y = newY;
+            gameState.grid[newY][newX] = CELL_TYPES.PLAYER;
+            gameState.moves++;
+            moveAgents();
+            updateStats();
+            render3DScene();
+        }
+
+        function moveAgents() {
+            const GRID_SIZE = gameState.gridSize;
+            for (let agent of gameState.agents) {
+                if (gameState.grid[agent.y][agent.x] === CELL_TYPES.AGENT) {
+                    gameState.grid[agent.y][agent.x] = CELL_TYPES.EMPTY;
+                }
+            }
+            for (let agent of gameState.agents) {
+                const dx = gameState.player.x - agent.x;
+                const dy = gameState.player.y - agent.y;
+                let moveX = 0, moveY = 0;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    moveX = dx > 0 ? 1 : -1;
+                } else if (dy !== 0) {
+                    moveY = dy > 0 ? 1 : -1;
+                } else if (dx !== 0) {
+                    moveX = dx > 0 ? 1 : -1;
+                }
+                const newX = agent.x + moveX;
+                const newY = agent.y + moveY;
+                if (newX >= 0 && newX < GRID_SIZE && newY >= 0 && newY < GRID_SIZE) {
+                    const targetCell = gameState.grid[newY][newX];
+                    if (targetCell !== CELL_TYPES.WALL && targetCell !== CELL_TYPES.AGENT && targetCell !== CELL_TYPES.PHONE && 
+                        targetCell !== CELL_TYPES.RED_PILL && targetCell !== CELL_TYPES.BLUE_PILL) {
+                        if (targetCell === CELL_TYPES.PLAYER) {
+                            loseGame();
+                            return;
+                        }
+                        agent.x = newX;
+                        agent.y = newY;
+                    }
+                }
+            }
+            for (let agent of gameState.agents) {
+                if (gameState.grid[agent.y][agent.x] === CELL_TYPES.PLAYER) {
+                    loseGame();
+                    return;
+                }
+                gameState.grid[agent.y][agent.x] = CELL_TYPES.AGENT;
+            }
+        }
+
+        function winGame() {
+            gameState.gameOver = true;
+            gameState.won = true;
+            clearInterval(gameState.timerInterval);
+            playWinSound();
+            const t = translations[gameState.language];
+            showModal(
+                t.winTitle,
+                t.winMessage(gameState.level, gameState.moves, gameState.timer),
+                t.winButton
+            );
+        }
+
+        function loseGame() {
+            gameState.gameOver = true;
+            gameState.won = false;
+            clearInterval(gameState.timerInterval);
+            playLoseSound();
+            document.getElementById('canvas-container').classList.add('glitch-effect');
+            setTimeout(() => {
+                document.getElementById('canvas-container').classList.remove('glitch-effect');
+            }, 2000);
+            const t = translations[gameState.language];
+            showModal(
+                t.loseTitle,
+                t.loseMessage,
+                t.loseButton
+            );
+        }
+
+        function showModal(title, message, btnText) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalBtn').textContent = btnText;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('modal').classList.add('hidden');
+            if (gameState.won) {
+                gameState.level++;
+                initGame();
+            } else {
+                initGame();
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('level').textContent = gameState.level;
+            document.getElementById('moves').textContent = gameState.moves;
+            document.getElementById('timer').textContent = gameState.timer + 's';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // Add pressed key to set (normalize to lowercase)
+            pressedKeys.add(e.key.toLowerCase());
+            
+            // Check for cheat code M+I+L
+            if (!gameState.gameOver && pressedKeys.has('m') && pressedKeys.has('i') && pressedKeys.has('l')) {
+                console.log('🎮 CHEAT CODE ACTIVATED! Skipping level...');
+                winGame();
+                return;
+            }
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    movePlayer(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    e.preventDefault();
+                    movePlayer(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    e.preventDefault();
+                    movePlayer(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    e.preventDefault();
+                    movePlayer(1, 0);
+                    break;
+                case ' ':
+                    e.preventDefault();
+                    if (!document.getElementById('difficultyModal').classList.contains('hidden')) {
+                        document.getElementById('btnNormal').click();
+                    } else if (!document.getElementById('modal').classList.contains('hidden')) {
+                        document.getElementById('modalBtn').click();
+                    }
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            // Remove released key from set (normalize to lowercase)
+            pressedKeys.delete(e.key.toLowerCase());
+        });
+
+        document.getElementById('btnRestart').addEventListener('click', () => {
+            initGame();
+        });
+
+        document.getElementById('btnNewGame').addEventListener('click', () => {
+            gameState.level = 1;
+            updateBoardSizeButtons();
+            document.getElementById('difficultyModal').classList.remove('hidden');
+        });
+
+        document.getElementById('modalBtn').addEventListener('click', hideModal);
+
+        function updateBoardSizeButtons() {
+            const btn10 = document.getElementById('btnSize10');
+            const btn12 = document.getElementById('btnSize12');
+            const btn14 = document.getElementById('btnSize14');
+            [btn10, btn12, btn14].forEach(btn => {
+                btn.classList.remove('border-4', 'border-green-300', 'bg-green-500', 'text-black');
+                btn.classList.add('border-2');
+                btn.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                btn.style.color = '#0f0';
+            });
+            let selectedBtn;
+            if (gameState.gridSize === 10) {
+                selectedBtn = btn10;
+            } else if (gameState.gridSize === 12) {
+                selectedBtn = btn12;
+            } else if (gameState.gridSize === 14) {
+                selectedBtn = btn14;
+            }
+            if (selectedBtn) {
+                selectedBtn.classList.remove('border-2');
+                selectedBtn.classList.add('border-4', 'border-green-300');
+                selectedBtn.style.backgroundColor = '#0f0';
+                selectedBtn.style.color = '#000';
+                selectedBtn.style.fontWeight = 'bold';
+            }
+        }
+
+        document.getElementById('btnSize10').addEventListener('click', () => {
+            gameState.gridSize = 10;
+            updateBoardSizeButtons();
+        });
+
+        document.getElementById('btnSize12').addEventListener('click', () => {
+            gameState.gridSize = 12;
+            updateBoardSizeButtons();
+        });
+
+        document.getElementById('btnSize14').addEventListener('click', () => {
+            gameState.gridSize = 14;
+            updateBoardSizeButtons();
+        });
+
+        document.getElementById('btnEasy').addEventListener('click', () => {
+            initAudio();
+            gameState.difficulty = 'easy';
+            document.getElementById('difficultyModal').classList.add('hidden');
+            document.getElementById('btnRestart').classList.remove('hidden');
+            updateSceneForGridSize();
+            initGame();
+        });
+
+        document.getElementById('btnNormal').addEventListener('click', () => {
+            initAudio();
+            gameState.difficulty = 'normal';
+            document.getElementById('difficultyModal').classList.add('hidden');
+            document.getElementById('btnRestart').classList.remove('hidden');
+            updateSceneForGridSize();
+            initGame();
+        });
+
+        document.getElementById('btnHard').addEventListener('click', () => {
+            initAudio();
+            gameState.difficulty = 'hard';
+            document.getElementById('difficultyModal').classList.add('hidden');
+            document.getElementById('btnRestart').classList.remove('hidden');
+            updateSceneForGridSize();
+            initGame();
+        });
+
+        // Function to update language button text
+        function updateLanguageButton(lang) {
+            const langTexts = {
+                en: '🇬🇧 ENGLISH',
+                it: '🇮🇹 ITALIANO',
+                es: '🇪🇸 ESPAÑOL',
+                fa: '🇮🇷 فارسی',
+                fr: '🇫🇷 FRANÇAIS',
+                de: '🇩🇪 DEUTSCH',
+                pt: '🇵🇹 PORTUGUÊS',
+                ru: '🇷🇺 РУССКИЙ',
+                zh: '🇨🇳 中文',
+                ja: '🇯🇵 日本語',
+                ar: '🇸🇦 العربية'
+            };
+            document.getElementById('currentLangText').textContent = langTexts[lang];
+        }
+
+        // Toggle language dropdown
+        document.getElementById('btnLangCurrent').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('langDropdown');
+            dropdown.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('langDropdown');
+            const btn = document.getElementById('btnLangCurrent');
+            if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Language selection from dropdown
+        document.getElementById('btnLangEN').addEventListener('click', () => {
+            applyLanguage('en');
+            updateLanguageButton('en');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangIT').addEventListener('click', () => {
+            applyLanguage('it');
+            updateLanguageButton('it');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangES').addEventListener('click', () => {
+            applyLanguage('es');
+            updateLanguageButton('es');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangFA').addEventListener('click', () => {
+            applyLanguage('fa');
+            updateLanguageButton('fa');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangFR').addEventListener('click', () => {
+            applyLanguage('fr');
+            updateLanguageButton('fr');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangDE').addEventListener('click', () => {
+            applyLanguage('de');
+            updateLanguageButton('de');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangPT').addEventListener('click', () => {
+            applyLanguage('pt');
+            updateLanguageButton('pt');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangRU').addEventListener('click', () => {
+            applyLanguage('ru');
+            updateLanguageButton('ru');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangZH').addEventListener('click', () => {
+            applyLanguage('zh');
+            updateLanguageButton('zh');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangJA').addEventListener('click', () => {
+            applyLanguage('ja');
+            updateLanguageButton('ja');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        document.getElementById('btnLangAR').addEventListener('click', () => {
+            applyLanguage('ar');
+            updateLanguageButton('ar');
+            document.getElementById('langDropdown').classList.add('hidden');
+        });
+
+        // Scroll buttons for language dropdown
+        document.getElementById('btnScrollUp').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('langDropdown');
+            dropdown.scrollTop -= 40;
+        });
+
+        document.getElementById('btnScrollDown').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('langDropdown');
+            dropdown.scrollTop += 40;
+        });
+
+        // Mouse wheel scroll for language dropdown
+        document.getElementById('langDropdown').addEventListener('wheel', (e) => {
+            e.stopPropagation(); // Prevents camera zoom when scrolling the dropdown
+        }, { passive: true });
+
+        document.querySelectorAll('.btn-matrix').forEach(button => {
+            button.addEventListener('mouseenter', playHoverSound);
+        });
+
+        initThreeJS();
+        applyLanguage('en');
+        setTimeout(() => {
+            updateBoardSizeButtons();
+        }, 100);
+        
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 1) {
+                e.preventDefault();
+                cameraControls.isRotating = true;
+                cameraControls.lastMouseX = e.clientX;
+                cameraControls.lastMouseY = e.clientY;
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 1) {
+                cameraControls.isRotating = false;
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (cameraControls.isRotating) {
+                const deltaX = e.clientX - cameraControls.lastMouseX;
+                const deltaY = e.clientY - cameraControls.lastMouseY;
+                cameraControls.rotationY += deltaX * 0.005;
+                cameraControls.rotationX = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, cameraControls.rotationX + deltaY * 0.005));
+                cameraControls.lastMouseX = e.clientX;
+                cameraControls.lastMouseY = e.clientY;
+                updateCamera();
+            }
+        });
+
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            cameraControls.distance += e.deltaY * 0.01;
+            cameraControls.distance = Math.max(10, Math.min(60, cameraControls.distance));
+            updateCamera();
+        }, { passive: false });
+        
+        cameraControls.rotationY = 0;
+        cameraControls.rotationX = Math.PI / 3.5;
+        updateCamera();
+        animate();
+    </script>
+</body>
+</html>
